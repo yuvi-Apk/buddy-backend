@@ -1,0 +1,109 @@
+// Database schema. Change it only through migrations:
+//   pnpm exec prisma migrate dev --name <what_changed>
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Admin panel: staff accounts, roles and page permissions
+// ---------------------------------------------------------------------------
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  adminUsers  AdminUser[]
+}
+
+// One row per (role, page). `page` is a PageName from src/config/rbac.config.ts.
+model RolePermission {
+  roleId   String
+  page     String
+  isAccess Boolean @default(false)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, page])
+}
+
+model AdminUser {
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  isActive     Boolean @default(true)
+  roleId       String
+
+  // Login lockout (RULES.md #13)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role     Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  sessions Session[]
+
+  @@index([roleId])
+}
+
+// ---------------------------------------------------------------------------
+// App users (students): log in with a phone number and OTP
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+}
+
+// ---------------------------------------------------------------------------
+// Sessions: one row per login, for both admins and users
+// ---------------------------------------------------------------------------
+
+enum SessionSubject {
+  ADMIN
+  USER
+}
+
+model Session {
+  id          String         @id @default(uuid())
+  subjectType SessionSubject
+  adminUserId String?
+  userId      String?
+
+  // Only hashes are stored (RULES.md #12). The previous hash is kept to detect a stolen,
+  // already-used refresh token.
+  refreshTokenHash         String
+  previousRefreshTokenHash String?
+
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  userAgent String?
+  ip        String?
+
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([userId])
+  @@index([expiresAt])
+}

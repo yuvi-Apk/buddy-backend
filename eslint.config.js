@@ -147,7 +147,12 @@ export default tseslint.config(
 
   // The only files allowed to read process.env.
   {
-    files: ["src/config/env.ts", "prisma.config.ts"],
+    files: [
+      "src/config/env.ts",
+      "prisma.config.ts",
+      // Passes the parent environment (PATH etc.) to the Prisma CLI it spawns.
+      "tests/setup/global-setup.ts",
+    ],
     rules: { "no-restricted-properties": "off" },
   },
 

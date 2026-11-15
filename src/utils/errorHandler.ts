@@ -3,6 +3,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { ZodError } from "zod";
+import { Prisma } from "../generated/prisma/client.js";
 import { ApiError } from "./ApiError.js";
 
 interface ErrorBody {
@@ -18,6 +19,15 @@ const body = (message: string, errors: unknown[] = []): ErrorBody => ({
   errors,
   data: null,
 });
+
+const PRISMA_ERRORS: Record<string, { status: number; message: string }> = {
+  P2002: { status: 409, message: "A record with this value already exists" },
+  P2003: {
+    status: 409,
+    message: "This record is linked to other records and cannot be changed",
+  },
+  P2025: { status: 404, message: "Record not found" },
+};
 
 // Errors raised by Express body parsers and similar middleware carry a 4xx status.
 const SAFE_CLIENT_MESSAGES: Record<number, string> = {
@@ -65,6 +75,16 @@ export const errorHandler = (
       req.log.error({ err }, "ApiError with 5xx status");
     }
     return res.status(err.statusCode).json(body(err.message, err.errors));
+  }
+
+  /* PRISMA ERRORS: fixed messages only. The Prisma error itself names tables and columns. */
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    const mapped = PRISMA_ERRORS[err.code];
+    if (mapped) {
+      return res.status(mapped.status).json(body(mapped.message));
+    }
+    req.log.error({ err }, "Unmapped Prisma error");
+    return res.status(500).json(body("Internal Server Error"));
   }
 
   /* JWT ERRORS: TokenExpiredError extends JsonWebTokenError, so it is checked first */
