@@ -19,6 +19,7 @@ matching files (architecture, modules, database, testing, env, ai). Developer gu
 ## Building
 
 - New feature folder: use the `new-module` skill. New endpoint in an existing module: use `add-endpoint`.
+  Tests for code that already exists (for example written by hand): use `write-tests`.
 - A module is six files (`routes`, `controller`, `service`, `repository`, `schema`, `index.ts`). Copy `src/modules/role/`.
 
 ## Never

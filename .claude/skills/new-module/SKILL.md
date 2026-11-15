@@ -1,6 +1,6 @@
 ---
 name: new-module
-description: Create a new feature module in the Buddy backend (the five files, wiring, permission page, migration and tests). Use when asked to add a new feature, resource or module such as "school", "student" or "book".
+description: Create a new feature module in the Buddy backend (the six files, wiring, permission page, migration and tests). Use when asked to add a new feature, resource or module such as "school", "student" or "book".
 ---
 
 # New module

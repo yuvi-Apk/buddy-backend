@@ -101,5 +101,7 @@ Start with the overview, then read the guide for what you are about to do.
 
 This repo is set up for Claude Code. `CLAUDE.md` is the short brief, `.claude/rules/` holds the rules
 (loaded only for the files being edited), and two skills, `new-module` and `add-endpoint`, walk
-through the same steps as guides 03 and 04. A hook stops Claude from reading `.env`, and Claude never
+through the same steps as guides 03 and 04. If you wrote a module or endpoint by hand, ask Claude to
+"write tests for the `<feature>` module": the `write-tests` skill lists its endpoints, finds the
+missing cases and writes them in `tests/modules/<feature>.test.ts`. A hook stops Claude from reading `.env`, and Claude never
 commits: it hands over a commit message for you to review.

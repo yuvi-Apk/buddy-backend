@@ -122,6 +122,11 @@ describe("POST /admin/roles", () => {
 | `otpSender.codes.get(phone)`              | The last code "sent" to a phone                                                |
 | `MISSING_ID`                              | A valid UUID that matches nothing                                              |
 
+Wrote the code by hand and want Claude to write the tests? Ask "write tests for the `<feature>`
+module" (or for one endpoint). The `write-tests` skill reads the routes, schema and service, shows
+which cases are missing, and writes only those. It never changes `src/`. If a test shows a bug, it
+reports the bug to you.
+
 Use the helpers instead of copying login code into a test file. If you need a new one that more
 than one file will use, add it to `helpers/`.
 
