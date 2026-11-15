@@ -1,4 +1,4 @@
-// Upload limits and locations, in one place (RULES.md #15).
+// Upload limits and locations, in one place (core-rules #15).
 import path from "node:path";
 
 /** Sub-folders of public/images that files may be saved into. Add new ones here. */

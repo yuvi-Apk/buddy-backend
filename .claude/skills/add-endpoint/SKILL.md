@@ -5,8 +5,9 @@ description: Add one endpoint to an existing Buddy backend module, working throu
 
 # Add an endpoint
 
-Work bottom-up through the module's five files, so each layer is ready before the next one
-uses it. `src/modules/role/` is the reference for every step.
+Work bottom-up through the module's files, so each layer is ready before the next one
+uses it. `src/modules/role/` is the reference for every step; the rules are in
+`.claude/rules/modules.md` and the full guide for people is `docs/04-add-an-endpoint.md`.
 
 ## Steps
 
@@ -32,7 +33,7 @@ uses it. `src/modules/role/` is the reference for every step.
 7. **index.ts**: only if another module needs a new type, export it from `index.ts` with
    `export type`. The router function there already picks up the new route.
 
-## Checklist before you commit
+## Checklist before you hand over
 
 - [ ] The route has a guard: `verifyAdmin` + `requirePermission(...)`, `verifyAdmin` +
       `ownAccountRoute()`, `verifyUser`, or `publicRoute()`

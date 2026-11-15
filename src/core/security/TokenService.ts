@@ -2,7 +2,7 @@
 //
 // Access token:  a JWT, valid for a few minutes, sent on every request.
 // Refresh token: a random value, valid for days, used only to get a new access token.
-//                Format "<sessionId>.<random>". Only its SHA-256 hash is stored (RULES.md #12).
+//                Format "<sessionId>.<random>". Only its SHA-256 hash is stored (core-rules #12).
 //
 // Admin and user access tokens use different secrets and audiences, so a user token can
 // never be accepted on an admin route.

@@ -1,4 +1,4 @@
-// RULES.md #1: every route must carry a guard. A guard is either an auth middleware
+// core-rules #1: every route must carry a guard. A guard is either an auth middleware
 // (verifyAdmin, verifyUser, requirePermission) or publicRoute() for routes that are open on purpose.
 // tests/guardrails/route-guards.test.ts walks the route table and fails on any route without one.
 import type { RequestHandler } from "express";

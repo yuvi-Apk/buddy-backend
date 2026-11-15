@@ -1,4 +1,4 @@
-// RULES.md #11: secrets never appear in logs.
+// core-rules #11: secrets never appear in logs.
 import { Writable } from "node:stream";
 import express from "express";
 import pino from "pino";

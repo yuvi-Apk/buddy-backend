@@ -53,6 +53,6 @@ Every response has the shape `{ success, message, errors, data }` (errors) or
 ## Docs
 
 - [CLAUDE.md](CLAUDE.md): working rules, don'ts and definition of done
-- [docs/RULES.md](docs/RULES.md): every rule and how it is enforced
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): folder structure, request flow, how AI features will plug in
+- [.claude/rules/core-rules.md](.claude/rules/core-rules.md): every rule and how it is enforced
+- [.claude/rules/](.claude/rules/): architecture, modules, database, testing, env and AI rules
 - `.claude/skills/new-module` and `.claude/skills/add-endpoint`: step-by-step guides for new features

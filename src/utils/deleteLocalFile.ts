@@ -23,7 +23,7 @@ const isInside = (root: string, target: string) => {
  *  - absolute path
  *
  * Refuses (and returns false for) anything outside the upload folders, so a crafted
- * path such as "../../.env" can never delete another file (RULES.md #15).
+ * path such as "../../.env" can never delete another file (core-rules #15).
  * Returns true when a file was deleted.
  */
 export const deleteLocalFile = async (filePath: string): Promise<boolean> => {

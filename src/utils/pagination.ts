@@ -1,4 +1,4 @@
-// RULES.md #16: every list endpoint is paginated and the page size has a hard maximum.
+// core-rules #16: every list endpoint is paginated and the page size has a hard maximum.
 //
 //   schema:      export const listRolesQuery = paginationQuery.extend({ search: z.string().optional() });
 //   repository:  prisma.role.findMany({ ...toSkipTake(query), where, select })

@@ -1,4 +1,4 @@
-// The Prisma client. Only *.repository.ts files and container.ts may import this (RULES.md #5).
+// The Prisma client. Only *.repository.ts files and container.ts may import this (core-rules #5).
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client.js";
 import { env } from "./env.js";

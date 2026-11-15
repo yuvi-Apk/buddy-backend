@@ -44,7 +44,7 @@ model AdminUser {
   isActive     Boolean @default(true)
   roleId       String
 
-  // Login lockout (RULES.md #13)
+  // Login lockout (core-rules #13)
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
 
@@ -88,7 +88,7 @@ model Session {
   adminUserId String?
   userId      String?
 
-  // Only hashes are stored (RULES.md #12). The previous hash is kept to detect a stolen,
+  // Only hashes are stored (core-rules #12). The previous hash is kept to detect a stolen,
   // already-used refresh token.
   refreshTokenHash         String
   previousRefreshTokenHash String?

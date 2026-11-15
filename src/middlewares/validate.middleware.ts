@@ -1,4 +1,4 @@
-// RULES.md #7: every route validates its input with Zod before the controller runs.
+// core-rules #7: every route validates its input with Zod before the controller runs.
 //
 //   router.post("/", verifyAdmin, validate({ body: createRoleSchema }), controller.create);
 //

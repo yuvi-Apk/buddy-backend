@@ -1,4 +1,4 @@
-// RULES.md #2: .env.sample and .env.test must list exactly the variables in the Zod schema,
+// core-rules #2: .env.sample and .env.test must list exactly the variables in the Zod schema,
 // so the sample can never go stale.
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";

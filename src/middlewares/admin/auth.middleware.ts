@@ -4,7 +4,7 @@
 //
 // verifyAdmin answers "who is calling?". It checks, on every request:
 //   1. the access token is genuine, unexpired and an ADMIN token
-//   2. the session behind it is still active (so logout works immediately, RULES.md #4)
+//   2. the session behind it is still active (so logout works immediately, core-rules #4)
 //   3. the admin account still exists and is enabled
 import type { Request, RequestHandler } from "express";
 import type { PageName } from "../../config/rbac.config.js";

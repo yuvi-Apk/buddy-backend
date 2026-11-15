@@ -33,7 +33,7 @@ export class UserAuthService {
     { phone, otp }: VerifyOtpBody,
     client: ClientInfo
   ): Promise<UserLoginResult> {
-    // RULES.md #14: one message for a wrong code, an expired code and a disabled account.
+    // core-rules #14: one message for a wrong code, an expired code and a disabled account.
     const invalid = ApiError.unauthorized("Invalid or expired code");
 
     if (!(await this.otp.verify(phone, otp))) throw invalid;

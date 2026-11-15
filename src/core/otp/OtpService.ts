@@ -1,4 +1,4 @@
-// One-time login codes, kept in Redis so they expire on their own (RULES.md #12, #13).
+// One-time login codes, kept in Redis so they expire on their own (core-rules #12, #13).
 //
 // Rules:
 //   - 6 digits from a cryptographic random source

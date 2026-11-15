@@ -1,5 +1,5 @@
 // Central error handler. Every error ends here and leaves as { success, message, errors, data }.
-// RULES.md #10: the client only ever sees a safe, fixed message. The real error goes to the log.
+// core-rules #10: the client only ever sees a safe, fixed message. The real error goes to the log.
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { MulterError } from "multer";

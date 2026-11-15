@@ -1,4 +1,4 @@
-// Sessions: one per login. This is what makes logout immediate (RULES.md #4):
+// Sessions: one per login. This is what makes logout immediate (core-rules #4):
 // every request checks that its session is still active.
 //
 // Postgres is the source of truth. Redis holds a short-lived copy ("session:<id>") so the
@@ -126,7 +126,7 @@ export class SessionService {
     return this.sessions.listActiveForSubject(subject);
   }
 
-  /** Revokes one session, but only if it belongs to the caller (RULES.md #8). */
+  /** Revokes one session, but only if it belongs to the caller (core-rules #8). */
   async revokeOwned(sessionId: string, subject: Subject): Promise<void> {
     const owner = await this.sessions.findActiveSubject(sessionId);
     const isOwner =

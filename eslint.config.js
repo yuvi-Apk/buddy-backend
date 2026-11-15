@@ -1,4 +1,4 @@
-// ESLint guardrails. The import bans below enforce docs/RULES.md rules 2, 5, 6, 18 and 22.
+// ESLint guardrails. The bans below enforce .claude/rules/core-rules.md #2, #5, #6, #18 and #22.
 import tseslint from "typescript-eslint";
 
 // --- import bans ------------------------------------------------------------
@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 const prismaBan = {
   group: ["@prisma/client", "**/generated/prisma/**", "**/config/prisma.js"],
   message:
-    "Only *.repository.ts files may use Prisma (RULES.md #5). Call a service or repository instead.",
+    "Only *.repository.ts files may use Prisma (core-rules #5). Call a service or repository instead.",
 };
 
 // A module's index.ts is its public entry point. From another module, only that file may be
@@ -14,20 +14,20 @@ const prismaBan = {
 const otherModuleDeepImportBan = {
   regex: "^\\.\\./[^./][^/]*/(?!index\\.js$)[^/]+$",
   message:
-    "Import another module only through its index.js (RULES.md #6), e.g. ../session/index.js.",
+    "Import another module only through its index.js (core-rules #6), e.g. ../session/index.js.",
 };
 
 // The same rule for code outside src/modules (container, routes, middlewares, types).
 const moduleDeepImportBan = {
   regex: "(^|/)modules/[^/]+/(?!index\\.js$)[^/]+$",
   message:
-    "Import a module only through its index.js (RULES.md #6), e.g. ./modules/session/index.js.",
+    "Import a module only through its index.js (core-rules #6), e.g. ./modules/session/index.js.",
 };
 
 const anyRepositoryBan = {
   group: ["*.repository.js", "**/*.repository.js"],
   message:
-    "Only a service may use a repository (RULES.md #5). Call the service instead.",
+    "Only a service may use a repository (core-rules #5). Call the service instead.",
 };
 
 const restrictImports = (...patterns) => [
@@ -68,25 +68,25 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
 
-      // RULES.md #2: env is read only in src/config/env.ts
+      // core-rules #2: env is read only in src/config/env.ts
       "no-restricted-properties": [
         "error",
         {
           object: "process",
           property: "env",
           message:
-            "Read env only through `env` from src/config/env.ts (RULES.md #2).",
+            "Read env only through `env` from src/config/env.ts (core-rules #2).",
         },
       ],
 
-      // RULES.md #18: no raw SQL built from strings
+      // core-rules #18: no raw SQL built from strings
       "no-restricted-syntax": [
         "error",
         {
           selector:
             "MemberExpression[property.name=/^\\$(queryRawUnsafe|executeRawUnsafe)$/]",
           message:
-            "Unsafe raw SQL is banned (RULES.md #18). Use Prisma queries or tagged $queryRaw.",
+            "Unsafe raw SQL is banned (core-rules #18). Use Prisma queries or tagged $queryRaw.",
         },
       ],
     },

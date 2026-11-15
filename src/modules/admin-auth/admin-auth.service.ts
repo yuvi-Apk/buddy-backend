@@ -12,7 +12,7 @@ import type {
   AuthenticatedAdmin,
 } from "./admin-auth.schema.js";
 
-// After this many wrong passwords in a row the account is locked for a while (RULES.md #13).
+// After this many wrong passwords in a row the account is locked for a while (core-rules #13).
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
 
@@ -33,7 +33,7 @@ export class AdminAuthService {
     { email, password }: AdminLoginBody,
     client: ClientInfo
   ): Promise<AdminLoginResult> {
-    // RULES.md #14: one message for every failure, so nothing reveals whether the
+    // core-rules #14: one message for every failure, so nothing reveals whether the
     // email exists, the account is locked, or the account is disabled.
     const invalid = ApiError.unauthorized("Invalid email or password");
 

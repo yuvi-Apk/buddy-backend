@@ -12,7 +12,7 @@ export class AdminAuthRepository {
 
   /**
    * For the login check only: this is the one method that returns the password hash.
-   * Do not use it anywhere else (RULES.md #9).
+   * Do not use it anywhere else (core-rules #9).
    */
   findWithPasswordHashByEmail(email: string) {
     return this.prisma.adminUser.findUnique({

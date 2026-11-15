@@ -54,7 +54,7 @@ export class SessionRepository {
 
   /**
    * Swaps the refresh token in ONE statement. The WHERE clause is the check, so when two
-   * requests present the same token only one of them can succeed (RULES.md #3).
+   * requests present the same token only one of them can succeed (core-rules #3).
    * Returns true when the swap happened.
    */
   async rotateRefreshToken(input: {

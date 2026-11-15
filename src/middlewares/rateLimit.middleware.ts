@@ -1,4 +1,4 @@
-// Rate limiters backed by Redis, so the limit is shared by every API instance (RULES.md #13, #20).
+// Rate limiters backed by Redis, so the limit is shared by every API instance (core-rules #13, #20).
 // Limits are counted per client IP. Limits per phone number or per account live in the services.
 import type { RequestHandler } from "express";
 import { rateLimit } from "express-rate-limit";

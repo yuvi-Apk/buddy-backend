@@ -1,4 +1,4 @@
-// The only file allowed to read process.env (RULES.md #2).
+// The only file allowed to read process.env (core-rules #2).
 // Every variable is validated at boot; the app refuses to start on a bad or missing value.
 // When you add a variable here, add it to .env.sample and .env.test as well.
 import { z } from "zod";

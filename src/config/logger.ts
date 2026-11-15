@@ -1,7 +1,7 @@
 import pino from "pino";
 import { env } from "./env.js";
 
-// RULES.md #11: these fields are replaced with "[REDACTED]" wherever they appear in a log line.
+// core-rules #11: these fields are replaced with "[REDACTED]" wherever they appear in a log line.
 const REDACTED_PATHS = [
   "req.headers.authorization",
   "req.headers.cookie",

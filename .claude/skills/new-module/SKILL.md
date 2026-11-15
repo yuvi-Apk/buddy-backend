@@ -15,7 +15,8 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
 
 ## Before writing code
 
-1. Read `docs/RULES.md` and the five files in `src/modules/role/`.
+1. Read `.claude/rules/modules.md` and the six files in `src/modules/role/`. The full guide for
+   people is `docs/03-create-a-module.md`.
 2. Decide: who calls it (admin panel, app, or both), which table(s) it owns, and whether the
    rows belong to someone (a school, a user). If they do, plan the ownership check now.
 
@@ -30,7 +31,7 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
    List queries extend `paginationQuery` from `src/utils/pagination.ts`.
 3. **`<feature>.repository.ts`**: a class that takes `PrismaClient` in the constructor.
    Every query uses an explicit `select`. Never return a hash or secret. Counters and balances
-   use one conditional `updateMany` (see "Atomic update pattern" in `CLAUDE.md`).
+   use one conditional `updateMany` (see `.claude/rules/database.md`).
 4. **`<feature>.service.ts`**: a class with the rules. Throw `ApiError` for expected failures.
    Check ownership here on every read or change by ID, and answer 404 (not 403) for someone
    else's record. To use another module, inject its **service**, never its repository.
@@ -69,5 +70,5 @@ Run `pnpm lint`, `pnpm typecheck` and `pnpm test`. All three must pass.
 `tests/guardrails/route-guards.test.ts` fails if any new route has no guard, and
 `tests/guardrails/eslint-rules.test.ts` covers the import rules.
 
-If you added an env variable, follow "Env files" in `CLAUDE.md`. If you added a package, say
+If you added an env variable, follow `.claude/rules/env.md`. If you added a package, say
 why in the commit message. Then stop and give the user the commit message. Do not commit.

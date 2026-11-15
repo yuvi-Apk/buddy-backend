@@ -1,4 +1,4 @@
-// RULES.md #1: no route without a guard.
+// core-rules #1: no route without a guard.
 // Walks every route registered under /api/v1 and checks its middleware chain.
 import { afterAll, describe, expect, it } from "vitest";
 import {

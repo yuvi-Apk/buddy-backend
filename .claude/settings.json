@@ -28,13 +28,12 @@
       "Bash(git diff)",
       "Bash(git log *)",
       "Bash(git log)",
-      "Bash(git add *)",
-      "Bash(git commit *)",
       "Read(./.env.sample)",
       "Edit(./.env.sample)",
       "Read(./.env.test)",
       "Edit(./.env.test)"
     ],
+    "ask": ["Bash(git add *)", "Bash(git commit *)", "Bash(git rm *)"],
     "deny": [
       "Read(./.env)",
       "Edit(./.env)",
@@ -58,6 +57,18 @@
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/protect-env.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

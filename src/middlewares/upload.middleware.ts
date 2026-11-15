@@ -1,4 +1,4 @@
-// File upload with limits (RULES.md #15).
+// File upload with limits (core-rules #15).
 //
 //   router.post("/", verifyAdmin, requirePermission("UPLOAD"), uploadSingleImage("image"), ...)
 //

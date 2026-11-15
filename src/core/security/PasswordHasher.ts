@@ -1,4 +1,4 @@
-// Password hashing with scrypt from Node's built-in crypto (RULES.md #12). No extra package.
+// Password hashing with scrypt from Node's built-in crypto (core-rules #12). No extra package.
 // Stored format: scrypt$N$r$p$<salt base64>$<hash base64>
 // The cost values are saved inside each hash, so they can be raised later without breaking old ones.
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";

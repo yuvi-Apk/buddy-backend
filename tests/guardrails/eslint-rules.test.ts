@@ -1,4 +1,4 @@
-// Proves the ESLint guardrails in eslint.config.js really block what docs/RULES.md forbids.
+// Proves the ESLint guardrails in eslint.config.js really block what core-rules forbids.
 import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
 import { describe, expect, it } from "vitest";
