@@ -6,7 +6,10 @@ import { createHealthRouter } from "./core/health/health.routes.js";
 export function createApiRouter(container: Container): Router {
   const router = Router();
 
+  // Health checks come before the rate limiter so load balancers are never throttled.
   router.use("/health", createHealthRouter(container.healthChecks));
+
+  router.use(container.rateLimiters.global);
 
   return router;
 }
