@@ -1,15 +1,32 @@
-# backend
+# Buddy backend
 
-To install dependencies:
+Backend for the Buddy AI education platform. Node 22, Express 5, Prisma + PostgreSQL, Redis.
 
-```bash
-bun install
-```
-
-To run:
+## Setup
 
 ```bash
-bun run index.ts
+pnpm install
+docker compose up -d            # Postgres (5432) and Redis (6379)
+cp .env.sample .env             # then fill in the values
+pnpm exec prisma migrate dev    # create the tables
+pnpm db:seed                    # create the first super admin
+pnpm dev
 ```
 
-This project was created using `bun init` in bun v1.3.14. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+## Commands
+
+| Command          | What it does                             |
+| ---------------- | ---------------------------------------- |
+| `pnpm dev`       | Start the API with reload                |
+| `pnpm build`     | Compile to `dist/`                       |
+| `pnpm start`     | Run the compiled API                     |
+| `pnpm lint`      | ESLint, including the architecture rules |
+| `pnpm typecheck` | TypeScript check                         |
+| `pnpm test`      | Vitest (needs `docker compose up -d`)    |
+| `pnpm format`    | Prettier                                 |
+
+## Docs
+
+- [docs/RULES.md](docs/RULES.md): the rules and how each one is enforced
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): folder structure and where code goes
+- [CLAUDE.md](CLAUDE.md): working rules for Claude Code and for developers
