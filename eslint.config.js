@@ -134,6 +134,17 @@ export default tseslint.config(
     rules: { "no-restricted-imports": "off" },
   },
 
+  // supertest types response bodies as `any`, so reading them in tests is unavoidable.
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+    },
+  },
+
   // The only files allowed to read process.env.
   {
     files: ["src/config/env.ts", "prisma.config.ts"],

@@ -1,0 +1,91 @@
+// Central error handler. Every error ends here and leaves as { success, message, errors, data }.
+// RULES.md #10: the client only ever sees a safe, fixed message. The real error goes to the log.
+import type { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { ZodError } from "zod";
+import { ApiError } from "./ApiError.js";
+
+interface ErrorBody {
+  success: false;
+  message: string;
+  errors: unknown[];
+  data: null;
+}
+
+const body = (message: string, errors: unknown[] = []): ErrorBody => ({
+  success: false,
+  message,
+  errors,
+  data: null,
+});
+
+// Errors raised by Express body parsers and similar middleware carry a 4xx status.
+const SAFE_CLIENT_MESSAGES: Record<number, string> = {
+  400: "Invalid request body",
+  413: "Request body too large",
+  415: "Unsupported content type",
+};
+
+function clientErrorStatus(err: Error): number | undefined {
+  const status =
+    (err as { status?: unknown }).status ??
+    (err as { statusCode?: unknown }).statusCode;
+  return typeof status === "number" && status >= 400 && status < 500
+    ? status
+    : undefined;
+}
+
+export const errorHandler = (
+  err: unknown,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // If the response has already started, let Express close the connection.
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  /* ZOD VALIDATION ERRORS */
+  if (err instanceof ZodError) {
+    return res.status(400).json(
+      body(
+        "Validation failed",
+        err.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        }))
+      )
+    );
+  }
+
+  /* CUSTOM API ERRORS */
+  if (err instanceof ApiError) {
+    if (err.statusCode >= 500) {
+      req.log.error({ err }, "ApiError with 5xx status");
+    }
+    return res.status(err.statusCode).json(body(err.message, err.errors));
+  }
+
+  /* JWT ERRORS: TokenExpiredError extends JsonWebTokenError, so it is checked first */
+  if (err instanceof jwt.TokenExpiredError) {
+    return res.status(401).json(body("Token expired"));
+  }
+  if (err instanceof jwt.JsonWebTokenError) {
+    return res.status(401).json(body("Invalid token"));
+  }
+
+  /* BODY PARSER AND OTHER 4xx MIDDLEWARE ERRORS */
+  if (err instanceof Error) {
+    const status = clientErrorStatus(err);
+    if (status !== undefined) {
+      return res
+        .status(status)
+        .json(body(SAFE_CLIENT_MESSAGES[status] ?? "Request failed"));
+    }
+  }
+
+  /* EVERYTHING ELSE: log the real error, tell the client nothing about it */
+  req.log.error({ err }, "Unhandled error");
+  return res.status(500).json(body("Internal Server Error"));
+};
