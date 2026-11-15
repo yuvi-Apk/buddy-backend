@@ -18,7 +18,9 @@ const REDACTED_PATHS = [
   "*.refreshToken",
 ];
 
-export const logger = pino({
+export const loggerOptions: pino.LoggerOptions = {
   level: env.LOG_LEVEL,
   redact: { paths: REDACTED_PATHS, censor: "[REDACTED]" },
-});
+};
+
+export const logger = pino(loggerOptions);
