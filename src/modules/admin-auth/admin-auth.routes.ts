@@ -40,7 +40,12 @@ export function createAdminAuthRouter(
     asyncHandler(controller.logout)
   );
 
-  router.get("/me", verifyAdmin, ownAccountRoute(), controller.me);
+  router.get(
+    "/me",
+    verifyAdmin,
+    ownAccountRoute(),
+    asyncHandler(controller.me)
+  );
 
   return router;
 }

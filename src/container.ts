@@ -8,9 +8,14 @@ import { redis } from "./config/redis.js";
 import type { HealthCheck } from "./core/health/health.routes.js";
 import { LogOtpSender, type OtpSender } from "./core/otp/OtpSender.js";
 import { OtpService } from "./core/otp/OtpService.js";
+import { PermissionService } from "./core/permissions/PermissionService.js";
 import { PasswordHasher } from "./core/security/PasswordHasher.js";
 import { TokenService } from "./core/security/TokenService.js";
-import { createVerifyAdmin } from "./middlewares/admin/auth.middleware.js";
+import type { PageName } from "./config/rbac.config.js";
+import {
+  createPermissionGuards,
+  createVerifyAdmin,
+} from "./middlewares/admin/auth.middleware.js";
 import {
   createRateLimiters,
   type RateLimiters,
@@ -19,6 +24,9 @@ import { createVerifyUser } from "./middlewares/user/auth.middleware.js";
 import { AdminAuthController } from "./modules/admin-auth/admin-auth.controller.js";
 import { AdminAuthRepository } from "./modules/admin-auth/admin-auth.repository.js";
 import { AdminAuthService } from "./modules/admin-auth/admin-auth.service.js";
+import { RoleController } from "./modules/role/role.controller.js";
+import { RoleRepository } from "./modules/role/role.repository.js";
+import { RoleService } from "./modules/role/role.service.js";
 import { SessionController } from "./modules/session/session.controller.js";
 import { SessionRepository } from "./modules/session/session.repository.js";
 import { SessionService } from "./modules/session/session.service.js";
@@ -31,6 +39,10 @@ export interface Guards {
   verifyAdmin: RequestHandler;
   /** Requires a logged-in app user. Sets req.user and req.auth. */
   verifyUser: RequestHandler;
+  /** After verifyAdmin: the admin's role must have access to this page. */
+  requirePermission: (page: PageName) => RequestHandler;
+  /** After verifyAdmin: the admin's role must have access to at least one of these pages. */
+  requireAnyPermission: (pages: PageName[]) => RequestHandler;
 }
 
 export interface Container {
@@ -43,6 +55,8 @@ export interface Container {
   sessionController: SessionController;
   adminAuthController: AdminAuthController;
   userAuthController: UserAuthController;
+  permissionService: PermissionService;
+  roleController: RoleController;
 
   healthChecks: Record<string, HealthCheck>;
   /** Closes database and cache connections. Called on shutdown and after tests. */
@@ -78,6 +92,12 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   );
   const sessionController = new SessionController(sessionService);
 
+  // --- roles and permissions ---
+  const roleRepository = new RoleRepository(prisma);
+  const permissionService = new PermissionService(roleRepository, redis);
+  const roleService = new RoleService(roleRepository, permissionService);
+  const roleController = new RoleController(roleService);
+
   // --- admin auth ---
   const adminAuthRepository = new AdminAuthRepository(prisma);
   const adminAuthService = new AdminAuthService(
@@ -85,6 +105,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     sessionService,
     tokenService,
     passwordHasher,
+    permissionService,
     logger
   );
   const adminAuthController = new AdminAuthController(adminAuthService, {
@@ -115,6 +136,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       sessionService,
       userAuthService,
     }),
+    ...createPermissionGuards(permissionService),
   };
 
   return {
@@ -127,6 +149,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     sessionController,
     adminAuthController,
     userAuthController,
+    permissionService,
+    roleController,
 
     healthChecks: {
       postgres: async () => {

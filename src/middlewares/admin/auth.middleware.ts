@@ -7,6 +7,8 @@
 //   2. the session behind it is still active (so logout works immediately, RULES.md #4)
 //   3. the admin account still exists and is enabled
 import type { Request, RequestHandler } from "express";
+import type { PageName } from "../../config/rbac.config.js";
+import type { PermissionService } from "../../core/permissions/PermissionService.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import type { AdminAuthService } from "../../modules/admin-auth/admin-auth.service.js";
 import type { SessionService } from "../../modules/session/session.service.js";
@@ -54,4 +56,42 @@ export function createVerifyAdmin({
   });
 
   return markGuard(verifyAdmin, "admin");
+}
+
+// requirePermission answers "may this admin use this page?". It must come after verifyAdmin.
+// SUPER_ADMIN passes every check. Pages are defined in src/config/rbac.config.ts.
+export function createPermissionGuards(permissionService: PermissionService) {
+  /** The admin's role must have access to this page. */
+  const requirePermission = (page: PageName): RequestHandler =>
+    markGuard(
+      asyncHandler(async (req, _res, next) => {
+        if (!req.adminUser) throw ApiError.unauthorized();
+
+        const allowed = await permissionService.hasAccess(
+          req.adminUser.role,
+          page
+        );
+        if (!allowed) throw ApiError.forbidden("Forbidden: No permission");
+        next();
+      }),
+      "permission"
+    );
+
+  /** The admin's role must have access to at least one of these pages. */
+  const requireAnyPermission = (pages: PageName[]): RequestHandler =>
+    markGuard(
+      asyncHandler(async (req, _res, next) => {
+        if (!req.adminUser) throw ApiError.unauthorized();
+
+        const allowed = await permissionService.hasAnyAccess(
+          req.adminUser.role,
+          pages
+        );
+        if (!allowed) throw ApiError.forbidden("Forbidden: No permission");
+        next();
+      }),
+      "permission"
+    );
+
+  return { requirePermission, requireAnyPermission };
 }

@@ -1,4 +1,6 @@
 import type { Logger } from "pino";
+import type { PageName } from "../../config/rbac.config.js";
+import type { PermissionService } from "../../core/permissions/PermissionService.js";
 import type { PasswordHasher } from "../../core/security/PasswordHasher.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import { ApiError } from "../../utils/ApiError.js";
@@ -24,6 +26,7 @@ export class AdminAuthService {
     private readonly sessions: SessionService,
     private readonly tokens: TokenService,
     private readonly passwords: PasswordHasher,
+    private readonly permissions: PermissionService,
     private readonly logger: Logger
   ) {}
 
@@ -117,6 +120,11 @@ export class AdminAuthService {
     adminUserId: string
   ): Promise<AuthenticatedAdmin | null> {
     return this.admins.findActiveProfile(adminUserId);
+  }
+
+  /** The admin panel uses this to decide which menu items to show. */
+  allowedPages(admin: AuthenticatedAdmin): Promise<PageName[]> {
+    return this.permissions.allowedPages(admin.role);
   }
 
   private getDecoyHash(): Promise<string> {

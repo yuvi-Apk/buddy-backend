@@ -4,6 +4,7 @@ import type { Container } from "./container.js";
 import { createHealthRouter } from "./core/health/health.routes.js";
 import { ownAccountRoute } from "./middlewares/routeGuard.js";
 import { createAdminAuthRouter } from "./modules/admin-auth/admin-auth.routes.js";
+import { createRoleRouter } from "./modules/role/role.routes.js";
 import { createSessionRouter } from "./modules/session/session.routes.js";
 import { createUserAuthRouter } from "./modules/user-auth/user-auth.routes.js";
 
@@ -31,6 +32,14 @@ export function createApiRouter(container: Container): Router {
       guards.verifyAdmin,
       ownAccountRoute(),
     ])
+  );
+
+  router.use(
+    "/admin/roles",
+    createRoleRouter(container.roleController, {
+      verifyAdmin: guards.verifyAdmin,
+      requirePermission: guards.requirePermission,
+    })
   );
 
   // --- mobile app ---

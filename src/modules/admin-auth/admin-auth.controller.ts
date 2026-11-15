@@ -66,11 +66,11 @@ export class AdminAuthController {
     res.status(200).json(new ApiResponse(200, null, "Logged out"));
   };
 
-  me = (req: Request, res: Response) => {
+  me = async (req: Request, res: Response) => {
     if (!req.adminUser) throw ApiError.unauthorized();
-    res
-      .status(200)
-      .json(new ApiResponse(200, req.adminUser, "Profile fetched"));
+    const pages = await this.adminAuthService.allowedPages(req.adminUser);
+    const data = { ...req.adminUser, pages };
+    res.status(200).json(new ApiResponse(200, data, "Profile fetched"));
   };
 
   // --- helpers ---------------------------------------------------------------
