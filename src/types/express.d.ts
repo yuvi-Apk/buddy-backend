@@ -1,5 +1,6 @@
 // Extra fields this app adds to the Express request.
 import "express";
+import type { AuthenticatedAdmin } from "../modules/admin-auth/admin-auth.schema.js";
 import type { Subject } from "../modules/session/session.schema.js";
 
 declare global {
@@ -20,6 +21,9 @@ declare global {
         subject: Subject;
         sessionId: string;
       };
+
+      /** Set by verifyAdmin: the logged-in admin and their role. */
+      adminUser?: AuthenticatedAdmin;
     }
   }
 }
