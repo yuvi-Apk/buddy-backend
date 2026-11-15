@@ -2,6 +2,7 @@
 import "express";
 import type { AuthenticatedAdmin } from "../modules/admin-auth/admin-auth.schema.js";
 import type { Subject } from "../modules/session/session.schema.js";
+import type { AuthenticatedUser } from "../modules/user-auth/user-auth.schema.js";
 
 declare global {
   namespace Express {
@@ -24,6 +25,9 @@ declare global {
 
       /** Set by verifyAdmin: the logged-in admin and their role. */
       adminUser?: AuthenticatedAdmin;
+
+      /** Set by verifyUser: the logged-in app user. */
+      user?: AuthenticatedUser;
     }
   }
 }

@@ -39,6 +39,9 @@ export const envSchema = z.object({
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
 
+  // How login codes reach the phone. "log" prints the code to the server log (development only).
+  OTP_SENDER: z.enum(["log"]).default("log"),
+
   STORAGE_DRIVER: z.enum(["local"]).default("local"),
 
   // Used only by `pnpm db:seed` to create the first super admin.
@@ -48,8 +51,18 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+// Rules that involve more than one variable.
+const checkedEnvSchema = envSchema.refine(
+  (value) => !(value.NODE_ENV === "production" && value.OTP_SENDER === "log"),
+  {
+    path: ["OTP_SENDER"],
+    message:
+      '"log" writes login codes to the server log and is not allowed in production. Add an SMS provider.',
+  }
+);
+
 export function loadEnv(source: Record<string, string | undefined>): Env {
-  const result = envSchema.safeParse(source);
+  const result = checkedEnvSchema.safeParse(source);
   if (!result.success) {
     // Names and reasons only. Values are never printed.
     const problems = result.error.issues

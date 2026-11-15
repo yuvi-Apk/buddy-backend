@@ -5,6 +5,7 @@ import { createHealthRouter } from "./core/health/health.routes.js";
 import { ownAccountRoute } from "./middlewares/routeGuard.js";
 import { createAdminAuthRouter } from "./modules/admin-auth/admin-auth.routes.js";
 import { createSessionRouter } from "./modules/session/session.routes.js";
+import { createUserAuthRouter } from "./modules/user-auth/user-auth.routes.js";
 
 export function createApiRouter(container: Container): Router {
   const router = Router();
@@ -30,6 +31,19 @@ export function createApiRouter(container: Container): Router {
       guards.verifyAdmin,
       ownAccountRoute(),
     ])
+  );
+
+  // --- mobile app ---
+  router.use(
+    "/user/auth",
+    createUserAuthRouter(container.userAuthController, {
+      verifyUser: guards.verifyUser,
+      authRateLimit: rateLimiters.auth,
+    })
+  );
+  router.use(
+    "/user/sessions",
+    createSessionRouter(container.sessionController, [guards.verifyUser])
   );
 
   return router;

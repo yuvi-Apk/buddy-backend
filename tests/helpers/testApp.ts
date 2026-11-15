@@ -3,8 +3,20 @@ import { createApp } from "../../src/app.js";
 import { prisma } from "../../src/config/prisma.js";
 import { redis } from "../../src/config/redis.js";
 import { createContainer } from "../../src/container.js";
+import type { OtpSender } from "../../src/core/otp/OtpSender.js";
 
-export const container = createContainer();
+/** Stands in for the SMS provider: remembers the last code sent to each phone. */
+class CapturingOtpSender implements OtpSender {
+  readonly codes = new Map<string, string>();
+
+  send(phone: string, code: string): Promise<void> {
+    this.codes.set(phone, code);
+    return Promise.resolve();
+  }
+}
+
+export const otpSender = new CapturingOtpSender();
+export const container = createContainer({ otpSender });
 export const app = createApp(container);
 export { prisma, redis };
 
@@ -12,6 +24,7 @@ export { prisma, redis };
 export async function resetState(): Promise<void> {
   await prisma.$executeRaw`TRUNCATE TABLE "Session", "AdminUser", "User", "RolePermission", "Role" CASCADE`;
   await redis.flushdb();
+  otpSender.codes.clear();
 }
 
 /** Closes connections. Call in afterAll. */
