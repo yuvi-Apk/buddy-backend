@@ -6,8 +6,8 @@
 // enabled account. The app sends the token in the Authorization header.
 import type { RequestHandler } from "express";
 import type { TokenService } from "../../core/security/TokenService.js";
-import type { SessionService } from "../../modules/session/session.service.js";
-import type { UserAuthService } from "../../modules/user-auth/user-auth.service.js";
+import type { SessionService } from "../../modules/session/index.js";
+import type { UserAuthService } from "../../modules/user-auth/index.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { bearerToken } from "../../utils/clientInfo.js";

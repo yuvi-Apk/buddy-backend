@@ -2,8 +2,11 @@ import type { OtpSender } from "../../core/otp/OtpSender.js";
 import type { OtpService } from "../../core/otp/OtpService.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import { ApiError } from "../../utils/ApiError.js";
-import type { ClientInfo, IssuedSession } from "../session/session.schema.js";
-import type { SessionService } from "../session/session.service.js";
+import type {
+  ClientInfo,
+  IssuedSession,
+  SessionService,
+} from "../session/index.js";
 import type { UserAuthRepository } from "./user-auth.repository.js";
 import type {
   AuthenticatedUser,

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
-import type { AuthenticatedAdmin } from "../admin-auth/admin-auth.schema.js";
+import type { AuthenticatedAdmin } from "../admin-auth/index.js";
 import type {
   CreateRoleBody,
   ListRolesQuery,

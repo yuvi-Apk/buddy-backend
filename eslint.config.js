@@ -9,10 +9,19 @@ const prismaBan = {
     "Only *.repository.ts files may use Prisma (RULES.md #5). Call a service or repository instead.",
 };
 
-const otherModuleRepositoryBan = {
-  group: ["../*/*.repository.js", "**/modules/**/*.repository.js"],
+// A module's index.ts is its public entry point. From another module, only that file may be
+// imported: "../session/index.js" is fine, "../session/session.service.js" is not.
+const otherModuleDeepImportBan = {
+  regex: "^\\.\\./[^./][^/]*/(?!index\\.js$)[^/]+$",
   message:
-    "Do not import another module's repository (RULES.md #6). Call that module's service.",
+    "Import another module only through its index.js (RULES.md #6), e.g. ../session/index.js.",
+};
+
+// The same rule for code outside src/modules (container, routes, middlewares, types).
+const moduleDeepImportBan = {
+  regex: "(^|/)modules/[^/]+/(?!index\\.js$)[^/]+$",
+  message:
+    "Import a module only through its index.js (RULES.md #6), e.g. ./modules/session/index.js.",
 };
 
 const anyRepositoryBan = {
@@ -83,21 +92,26 @@ export default tseslint.config(
     },
   },
 
-  // Default for all source files: no Prisma, no repositories.
+  // Default for all source files: no Prisma, no repositories, modules only through index.js.
   {
     files: ["src/**/*.ts"],
     rules: {
-      "no-restricted-imports": restrictImports(prismaBan, anyRepositoryBan),
+      "no-restricted-imports": restrictImports(
+        prismaBan,
+        anyRepositoryBan,
+        moduleDeepImportBan
+      ),
     },
   },
 
-  // Inside a module: a service may use its own repository, never another module's.
+  // Inside a module: its service and index.ts may use its own repository.
+  // Other modules are reached only through their index.js.
   {
     files: ["src/modules/**/*.ts"],
     rules: {
       "no-restricted-imports": restrictImports(
         prismaBan,
-        otherModuleRepositoryBan
+        otherModuleDeepImportBan
       ),
     },
   },
@@ -110,7 +124,11 @@ export default tseslint.config(
       "src/modules/**/*.schema.ts",
     ],
     rules: {
-      "no-restricted-imports": restrictImports(prismaBan, anyRepositoryBan),
+      "no-restricted-imports": restrictImports(
+        prismaBan,
+        anyRepositoryBan,
+        otherModuleDeepImportBan
+      ),
     },
   },
 
@@ -118,14 +136,21 @@ export default tseslint.config(
   {
     files: ["src/modules/**/*.repository.ts"],
     rules: {
-      "no-restricted-imports": restrictImports(otherModuleRepositoryBan),
+      "no-restricted-imports": restrictImports(otherModuleDeepImportBan),
     },
   },
 
-  // Wiring and infrastructure files that must touch Prisma or repositories.
+  // Wiring files that need the Prisma client or its types. Modules still only via index.js.
+  {
+    files: ["src/container.ts", "src/types/module.types.ts"],
+    rules: {
+      "no-restricted-imports": restrictImports(moduleDeepImportBan),
+    },
+  },
+
+  // Infrastructure files that must touch Prisma directly.
   {
     files: [
-      "src/container.ts",
       "src/config/prisma.ts",
       "src/utils/errorHandler.ts",
       "prisma/**/*.ts",

@@ -1,8 +1,8 @@
 // Extra fields this app adds to the Express request.
 import "express";
-import type { AuthenticatedAdmin } from "../modules/admin-auth/admin-auth.schema.js";
-import type { Subject } from "../modules/session/session.schema.js";
-import type { AuthenticatedUser } from "../modules/user-auth/user-auth.schema.js";
+import type { AuthenticatedAdmin } from "../modules/admin-auth/index.js";
+import type { Subject } from "../modules/session/index.js";
+import type { AuthenticatedUser } from "../modules/user-auth/index.js";
 
 declare global {
   namespace Express {

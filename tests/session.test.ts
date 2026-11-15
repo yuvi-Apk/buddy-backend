@@ -11,7 +11,8 @@ import {
   resetState,
 } from "./helpers/testApp.js";
 
-const { sessionService, tokenService } = container;
+const { tokenService } = container;
+const sessionService = container.modules.session.service;
 const client = { userAgent: "vitest", ip: "127.0.0.1" };
 
 let adminSubject: Subject;

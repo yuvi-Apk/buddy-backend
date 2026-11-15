@@ -4,8 +4,7 @@ import type { PermissionService } from "../../core/permissions/PermissionService
 import type { PasswordHasher } from "../../core/security/PasswordHasher.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import { ApiError } from "../../utils/ApiError.js";
-import type { ClientInfo } from "../session/session.schema.js";
-import type { SessionService } from "../session/session.service.js";
+import type { ClientInfo, SessionService } from "../session/index.js";
 import type { AdminAuthRepository } from "./admin-auth.repository.js";
 import type {
   AdminLoginBody,

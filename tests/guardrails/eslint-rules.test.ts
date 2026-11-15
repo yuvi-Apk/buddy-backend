@@ -47,6 +47,55 @@ describe("ESLint guardrails", () => {
     expect(ids).toContain("no-restricted-imports");
   });
 
+  it("blocks a module importing another module's files directly", async () => {
+    for (const path of [
+      "../session/session.service.js",
+      "../session/session.schema.js",
+    ]) {
+      const ids = await ruleIdsFor(
+        "src/modules/demo/demo.service.ts",
+        `import type { X } from "${path}";\nexport type Y = X;\n`
+      );
+      expect(ids, path).toContain("no-restricted-imports");
+    }
+  });
+
+  it("allows a module importing another module through its index.js", async () => {
+    const ids = await ruleIdsFor(
+      "src/modules/demo/demo.service.ts",
+      'import type { SessionService } from "../session/index.js";\nexport type Y = SessionService;\n'
+    );
+    expect(ids).not.toContain("no-restricted-imports");
+  });
+
+  it("blocks code outside modules from reaching past a module's index.js", async () => {
+    for (const filePath of [
+      "src/container.ts",
+      "src/routes.ts",
+      "src/middlewares/admin/auth.middleware.ts",
+    ]) {
+      const ids = await ruleIdsFor(
+        filePath,
+        'import { RoleService } from "./modules/role/role.service.js";\nexport const x = RoleService;\n'
+      );
+      expect(ids, filePath).toContain("no-restricted-imports");
+
+      const viaIndex = await ruleIdsFor(
+        filePath,
+        'import { createRoleModule } from "./modules/role/index.js";\nexport const x = createRoleModule;\n'
+      );
+      expect(viaIndex, filePath).not.toContain("no-restricted-imports");
+    }
+  });
+
+  it("allows a module's index.ts to build its own repository", async () => {
+    const ids = await ruleIdsFor(
+      "src/modules/demo/index.ts",
+      'import { DemoRepository } from "./demo.repository.js";\nexport const x = DemoRepository;\n'
+    );
+    expect(ids).not.toContain("no-restricted-imports");
+  });
+
   it("allows a service importing its own repository", async () => {
     const ids = await ruleIdsFor(
       "src/modules/demo/demo.service.ts",

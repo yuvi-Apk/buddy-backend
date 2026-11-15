@@ -2,7 +2,7 @@ import { PAGES, SUPER_ADMIN_ROLE } from "../../config/rbac.config.js";
 import type { PermissionService } from "../../core/permissions/PermissionService.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { paginated, type Paginated } from "../../utils/pagination.js";
-import type { AuthenticatedAdmin } from "../admin-auth/admin-auth.schema.js";
+import type { AuthenticatedAdmin } from "../admin-auth/index.js";
 import type { RoleRepository } from "./role.repository.js";
 import type {
   CreateRoleBody,

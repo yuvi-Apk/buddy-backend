@@ -1,6 +1,6 @@
-// Composition root: the only file that constructs classes and wires them together.
-// Order inside createContainer: infrastructure → repositories → services → guards → controllers.
-import type { RequestHandler } from "express";
+// Composition root: the only file that creates shared infrastructure and the modules.
+// Each module builds its own repository → service → controller in its index.ts.
+// Order: infrastructure → modules (a module only gets services built before it) → guards.
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
@@ -8,67 +8,35 @@ import { redis } from "./config/redis.js";
 import type { HealthCheck } from "./core/health/health.routes.js";
 import { LogOtpSender, type OtpSender } from "./core/otp/OtpSender.js";
 import { OtpService } from "./core/otp/OtpService.js";
-import { PermissionService } from "./core/permissions/PermissionService.js";
 import { PasswordHasher } from "./core/security/PasswordHasher.js";
 import { TokenService } from "./core/security/TokenService.js";
 import {
   LocalStorageProvider,
   type StorageProvider,
 } from "./core/storage/StorageProvider.js";
-import type { PageName } from "./config/rbac.config.js";
 import {
   createPermissionGuards,
   createVerifyAdmin,
 } from "./middlewares/admin/auth.middleware.js";
-import {
-  createRateLimiters,
-  type RateLimiters,
-} from "./middlewares/rateLimit.middleware.js";
+import { createRateLimiters } from "./middlewares/rateLimit.middleware.js";
 import { createVerifyUser } from "./middlewares/user/auth.middleware.js";
-import { AdminAuthController } from "./modules/admin-auth/admin-auth.controller.js";
-import { AdminAuthRepository } from "./modules/admin-auth/admin-auth.repository.js";
-import { AdminAuthService } from "./modules/admin-auth/admin-auth.service.js";
-import { RoleController } from "./modules/role/role.controller.js";
-import { RoleRepository } from "./modules/role/role.repository.js";
-import { RoleService } from "./modules/role/role.service.js";
-import { SessionController } from "./modules/session/session.controller.js";
-import { SessionRepository } from "./modules/session/session.repository.js";
-import { SessionService } from "./modules/session/session.service.js";
-import { UploadController } from "./modules/upload/upload.controller.js";
-import { UploadRepository } from "./modules/upload/upload.repository.js";
-import { UploadService } from "./modules/upload/upload.service.js";
-import { UserAuthController } from "./modules/user-auth/user-auth.controller.js";
-import { UserAuthRepository } from "./modules/user-auth/user-auth.repository.js";
-import { UserAuthService } from "./modules/user-auth/user-auth.service.js";
+import { createAdminAuthModule } from "./modules/admin-auth/index.js";
+import { createRoleModule } from "./modules/role/index.js";
+import { createSessionModule } from "./modules/session/index.js";
+import { createUploadModule } from "./modules/upload/index.js";
+import { createUserAuthModule } from "./modules/user-auth/index.js";
+import type { Guards, Infra } from "./types/module.types.js";
 
-export interface Guards {
-  /** Requires a logged-in admin. Sets req.adminUser and req.auth. */
-  verifyAdmin: RequestHandler;
-  /** Requires a logged-in app user. Sets req.user and req.auth. */
-  verifyUser: RequestHandler;
-  /** After verifyAdmin: the admin's role must have access to this page. */
-  requirePermission: (page: PageName) => RequestHandler;
-  /** After verifyAdmin: the admin's role must have access to at least one of these pages. */
-  requireAnyPermission: (pages: PageName[]) => RequestHandler;
-}
-
-export interface Container {
-  passwordHasher: PasswordHasher;
-  tokenService: TokenService;
-  rateLimiters: RateLimiters;
-  guards: Guards;
-
-  sessionService: SessionService;
-  sessionController: SessionController;
-  adminAuthController: AdminAuthController;
-  userAuthController: UserAuthController;
-  permissionService: PermissionService;
-  roleController: RoleController;
-  uploadController: UploadController;
-
-  healthChecks: Record<string, HealthCheck>;
-  /** Closes database and cache connections. Called on shutdown and after tests. */
-  shutdown: () => Promise<void>;
+/** What GET /health/ready checks. Each check throws when its dependency is down. */
+function healthChecks(): Record<string, HealthCheck> {
+  return {
+    postgres: async () => {
+      await prisma.$queryRaw`SELECT 1`;
+    },
+    redis: async () => {
+      await redis.ping();
+    },
+  };
 }
 
 /** Parts that tests (or a different deployment) may swap for their own implementation. */
@@ -78,8 +46,11 @@ export interface ContainerOverrides {
   storage?: StorageProvider;
 }
 
-export function createContainer(overrides: ContainerOverrides = {}): Container {
+export type Container = ReturnType<typeof createContainer>;
+
+export function createContainer(overrides: ContainerOverrides = {}) {
   // --- infrastructure ---
+  const infra: Infra = { prisma, redis, logger };
   const passwordHasher = overrides.passwordHasher ?? new PasswordHasher();
   const tokenService = new TokenService({
     adminSecret: env.ADMIN_ACCESS_TOKEN_SECRET,
@@ -93,92 +64,48 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   // STORAGE_DRIVER has one value today ("local"). Add a case here with each new provider.
   const storage = overrides.storage ?? new LocalStorageProvider();
 
-  // --- session ---
-  const sessionRepository = new SessionRepository(prisma);
-  const sessionService = new SessionService(
-    sessionRepository,
-    tokenService,
-    redis,
-    logger,
-    { refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS }
-  );
-  const sessionController = new SessionController(sessionService);
-
-  // --- roles and permissions ---
-  const roleRepository = new RoleRepository(prisma);
-  const permissionService = new PermissionService(roleRepository, redis);
-  const roleService = new RoleService(roleRepository, permissionService);
-  const roleController = new RoleController(roleService);
-
-  // --- admin auth ---
-  const adminAuthRepository = new AdminAuthRepository(prisma);
-  const adminAuthService = new AdminAuthService(
-    adminAuthRepository,
-    sessionService,
+  // --- modules (one line each; add new modules at the end) ---
+  const session = createSessionModule(infra, { tokenService });
+  const role = createRoleModule(infra);
+  const adminAuth = createAdminAuthModule(infra, {
+    sessionService: session.service,
     tokenService,
     passwordHasher,
-    permissionService,
-    logger
-  );
-  const adminAuthController = new AdminAuthController(adminAuthService, {
-    secure: env.NODE_ENV === "production",
-    accessTokenTtlMinutes: env.ACCESS_TOKEN_TTL_MINUTES,
+    permissionService: role.permissionService,
   });
-
-  // --- user auth ---
-  const userAuthRepository = new UserAuthRepository(prisma);
-  const userAuthService = new UserAuthService(
-    userAuthRepository,
-    sessionService,
+  const userAuth = createUserAuthModule(infra, {
+    sessionService: session.service,
     tokenService,
     otpService,
-    otpSender
-  );
-  const userAuthController = new UserAuthController(userAuthService);
-
-  // --- uploads ---
-  const uploadRepository = new UploadRepository(prisma);
-  const uploadService = new UploadService(uploadRepository, storage);
-  const uploadController = new UploadController(uploadService);
+    otpSender,
+  });
+  const upload = createUploadModule(infra, { storage });
 
   // --- guards ---
   const guards: Guards = {
     verifyAdmin: createVerifyAdmin({
       tokenService,
-      sessionService,
-      adminAuthService,
+      sessionService: session.service,
+      adminAuthService: adminAuth.service,
     }),
     verifyUser: createVerifyUser({
       tokenService,
-      sessionService,
-      userAuthService,
+      sessionService: session.service,
+      userAuthService: userAuth.service,
     }),
-    ...createPermissionGuards(permissionService),
+    ...createPermissionGuards(role.permissionService),
   };
 
   return {
+    modules: { session, role, adminAuth, userAuth, upload },
+    guards,
+    rateLimiters,
     passwordHasher,
     tokenService,
-    rateLimiters,
-    guards,
 
-    sessionService,
-    sessionController,
-    adminAuthController,
-    userAuthController,
-    permissionService,
-    roleController,
-    uploadController,
+    healthChecks: healthChecks(),
 
-    healthChecks: {
-      postgres: async () => {
-        await prisma.$queryRaw`SELECT 1`;
-      },
-      redis: async () => {
-        await redis.ping();
-      },
-    },
-
+    /** Closes database and cache connections. Called on shutdown and after tests. */
     shutdown: async () => {
       await prisma.$disconnect();
       await redis.quit();
