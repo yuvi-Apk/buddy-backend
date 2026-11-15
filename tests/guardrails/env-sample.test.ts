@@ -42,4 +42,10 @@ describe("loadEnv", () => {
     expect(attempt).toThrow(/ADMIN_ACCESS_TOKEN_SECRET/);
     expect(attempt).not.toThrow(/short-secret/);
   });
+
+  it("refuses to boot in production with the log OTP sender", () => {
+    expect(() =>
+      loadEnv({ ...valid, NODE_ENV: "production", OTP_SENDER: "log" })
+    ).toThrow(/OTP_SENDER/);
+  });
 });

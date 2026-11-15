@@ -20,8 +20,12 @@ Read `docs/RULES.md` (the rules and how each is enforced) and `docs/ARCHITECTURE
 
 - New feature folder: use the `new-module` skill.
 - New endpoint in an existing module: use the `add-endpoint` skill.
-- Every module has exactly five files: `routes`, `controller`, `service`, `repository`, `schema`.
-- Classes get their dependencies through the constructor. Create and wire them only in `src/container.ts`.
+- Every module has exactly six files: `routes`, `controller`, `service`, `repository`, `schema` and `index.ts`.
+- `index.ts` is the module's public entry point: it builds repository → service → controller and returns
+  the service(s) other modules need plus a `router(deps)` function. See `src/modules/role/index.ts`.
+- Other code imports a module only through its `index.js` (ESLint enforces this).
+- Classes get their dependencies through the constructor. `src/container.ts` creates shared infrastructure and
+  calls each module's `create<Feature>Module(...)` in one line; `src/routes.ts` mounts each module in one line.
 - Controller methods are arrow properties (`list = async (req, res) => {}`) so `this` survives being passed to a router.
 - Throw `ApiError` for expected failures. Return `new ApiResponse(status, data, message)`. Never build error JSON by hand.
 - Imports end in `.js` (ESM), even though the files are `.ts`.
@@ -69,4 +73,10 @@ A change is done when all of these are true:
 3. Every new route has a guard and a `validate()` schema.
 4. New env variables are in the schema, `.env.sample` and `.env.test`, and the user has been told.
 5. No rule in `docs/RULES.md` is broken.
-6. The work is committed with a message that says what changed and why.
+6. You have stopped and given the user a commit message that says what changed and why.
+
+## Commits
+
+Never run `git add` or `git commit`. When a step is done and the checks pass, stop, list the changed
+files, give the commit message (ending with the `Co-Authored-By` line), and wait. The user reviews the
+change and commits it themselves, then tells you to continue.

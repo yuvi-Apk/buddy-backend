@@ -25,7 +25,12 @@ uses it. `src/modules/role/` is the reference for every step.
    200 otherwise.
 5. **Route** (`<feature>.routes.ts`): add the route as guard(s) → `validate({...})` →
    `asyncHandler(controller.method)`. Fixed paths go above `/:id` paths.
-6. **Test** (`tests/<feature>.test.ts`): add tests for the endpoint.
+6. **Test** (`tests/modules/<feature>.test.ts`): add a `describe("<METHOD> <path>")` block
+   with tests in the order guard (401/403) → 400 → 404 / not the owner → rule failures → success.
+   Use `adminWith`, `superAdmin`, `loginUser` from `tests/helpers/auth.ts` and
+   `expectAdminPageRequired` from `tests/helpers/guards.ts`.
+7. **index.ts**: only if another module needs a new type, export it from `index.ts` with
+   `export type`. The router function there already picks up the new route.
 
 ## Checklist before you commit
 
@@ -39,4 +44,6 @@ uses it. `src/modules/role/` is the reference for every step.
 - [ ] A list endpoint is paginated
 - [ ] Slow work (email, SMS, file processing, AI calls) is not done inside the request
 - [ ] Tests cover: success, 401, 403, 400 for bad input and unknown fields, 404, not the owner
+- [ ] Other modules are imported only through their `index.js`
 - [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+- [ ] Stop and give the user the commit message (do not commit)

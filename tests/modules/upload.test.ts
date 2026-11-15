@@ -1,18 +1,24 @@
+// /admin/uploads: image uploads for the admin panel. Every route needs the UPLOAD page.
+// Each describe block is one endpoint, in the order: guards → 400/413 → 404 → success.
 import { existsSync } from "node:fs";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import request from "supertest";
 import sharp from "sharp";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { PageName } from "../src/config/rbac.config.js";
 import {
   MAX_UPLOAD_BYTES,
   PUBLIC_IMAGES_DIR,
   TEMP_UPLOAD_DIR,
-} from "../src/config/upload.config.js";
-import { deleteLocalFile } from "../src/utils/deleteLocalFile.js";
-import { createAdmin, TEST_PASSWORD } from "./helpers/fixtures.js";
-import { app, closeTestApp, prisma, resetState } from "./helpers/testApp.js";
+} from "../../src/config/upload.config.js";
+import { deleteLocalFile } from "../../src/utils/deleteLocalFile.js";
+import { adminWith } from "../helpers/auth.js";
+import {
+  expectAdminPageRequired,
+  MISSING_ID,
+  type Route,
+} from "../helpers/guards.js";
+import { app, closeTestApp, prisma, resetState } from "../helpers/testApp.js";
 
 const UPLOADS = "/api/v1/admin/uploads";
 
@@ -26,14 +32,6 @@ afterAll(async () => {
   for (const url of createdUrls) await rm(diskPath(url), { force: true });
   await closeTestApp();
 });
-
-async function authFor(pages: PageName[], email = "staff@buddy.test") {
-  await createAdmin({ email, pages });
-  const res = await request(app)
-    .post("/api/v1/admin/auth/login")
-    .send({ email, password: TEST_PASSWORD });
-  return { Authorization: `Bearer ${res.body.data.accessToken}` };
-}
 
 /** A real, noisy (hard to compress) image. */
 function makeImage(format: "png" | "jpeg", width = 1200, height = 900) {
@@ -64,9 +62,97 @@ async function upload(
   return res;
 }
 
+describe("guards on /admin/uploads", () => {
+  it("401 without a login and 403 without the UPLOAD page, on every route", async () => {
+    const routes: Route[] = [
+      ["post", `${UPLOADS}/images`],
+      ["get", UPLOADS],
+      ["delete", `${UPLOADS}/${MISSING_ID}`],
+    ];
+    await expectAdminPageRequired(routes, "UPLOAD");
+  });
+});
+
 describe("POST /admin/uploads/images", () => {
-  it("stores the image as WebP under 100 KB with a generated name", async () => {
-    const auth = await authFor(["UPLOAD"]);
+  it("401/403 write nothing to disk", async () => {
+    const image = await makeImage("png");
+    const before = await tempFiles();
+
+    const anonymous = await upload({}, image);
+    expect(anonymous.status).toBe(401);
+
+    const noAccess = await upload((await adminWith(["ROLE"])).auth, image);
+    expect(noAccess.status).toBe(403);
+
+    expect(await tempFiles()).toEqual(before);
+    expect(await prisma.uploadedFile.count()).toBe(0);
+  });
+
+  it("400 without a file", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
+    const res = await request(app)
+      .post(`${UPLOADS}/images`)
+      .set(auth)
+      .field("folder", "general");
+    expect(res.status).toBe(400);
+  });
+
+  it("400 for an unknown folder; 201 for an allowed one", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
+    const ok = await upload(auth, await makeImage("png"), {
+      folder: "profile",
+    });
+    expect(ok.status).toBe(201);
+    expect(ok.body.data.url).toMatch(/^\/images\/profile\//);
+
+    const bad = await upload(auth, await makeImage("png"), {
+      folder: "../../src",
+    });
+    expect(bad.status).toBe(400);
+  });
+
+  it("400 for a non-image file renamed and labelled as an image", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
+    const fake = Buffer.from("#!/bin/sh\necho pwned\n".repeat(50));
+    const res = await upload(auth, fake, {
+      filename: "innocent.jpg",
+      contentType: "image/jpeg",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe(
+      "File is not a valid JPEG, PNG or WebP image"
+    );
+    expect(await prisma.uploadedFile.count()).toBe(0);
+  });
+
+  it("400 for a file type that is not on the allowlist", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+    );
+    for (const [filename, contentType] of [
+      ["x.svg", "image/svg+xml"],
+      ["x.pdf", "application/pdf"],
+      ["x.html", "text/html"],
+    ] as const) {
+      const res = await upload(auth, svg, { filename, contentType });
+      expect(res.status, contentType).toBe(400);
+      expect(res.body.message).toBe(
+        "Only JPEG, PNG and WebP images are allowed"
+      );
+    }
+  });
+
+  it("413 for a file over the size limit", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
+    const res = await upload(auth, Buffer.alloc(MAX_UPLOAD_BYTES + 1024));
+    expect(res.status).toBe(413);
+    expect(res.body.message).toBe("File is too large");
+  });
+
+  it("201 stores the image as WebP under 100 KB with a generated name", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
     const res = await upload(auth, await makeImage("png"), {
       filename: "../../My Holiday Photo.png",
     });
@@ -84,8 +170,8 @@ describe("POST /admin/uploads/images", () => {
     expect(await prisma.uploadedFile.count()).toBe(1);
   });
 
-  it("serves the stored image over HTTP", async () => {
-    const auth = await authFor(["UPLOAD"]);
+  it("201 and the stored image is served over HTTP", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
     const { body } = await upload(auth, await makeImage("jpeg"), {
       filename: "a.jpg",
       contentType: "image/jpeg",
@@ -97,85 +183,8 @@ describe("POST /admin/uploads/images", () => {
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
   });
 
-  it("saves into an allowed folder and rejects an unknown one", async () => {
-    const auth = await authFor(["UPLOAD"]);
-    const ok = await upload(auth, await makeImage("png"), {
-      folder: "profile",
-    });
-    expect(ok.status).toBe(201);
-    expect(ok.body.data.url).toMatch(/^\/images\/profile\//);
-
-    const bad = await upload(auth, await makeImage("png"), {
-      folder: "../../src",
-    });
-    expect(bad.status).toBe(400);
-  });
-
-  it("rejects a non-image file that is renamed and labelled as an image", async () => {
-    const auth = await authFor(["UPLOAD"]);
-    const fake = Buffer.from("#!/bin/sh\necho pwned\n".repeat(50));
-    const res = await upload(auth, fake, {
-      filename: "innocent.jpg",
-      contentType: "image/jpeg",
-    });
-
-    expect(res.status).toBe(400);
-    expect(res.body.message).toBe(
-      "File is not a valid JPEG, PNG or WebP image"
-    );
-    expect(await prisma.uploadedFile.count()).toBe(0);
-  });
-
-  it("rejects a file type that is not on the allowlist", async () => {
-    const auth = await authFor(["UPLOAD"]);
-    const svg = Buffer.from(
-      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
-    );
-    for (const [filename, contentType] of [
-      ["x.svg", "image/svg+xml"],
-      ["x.pdf", "application/pdf"],
-      ["x.html", "text/html"],
-    ] as const) {
-      const res = await upload(auth, svg, { filename, contentType });
-      expect(res.status, contentType).toBe(400);
-      expect(res.body.message).toBe(
-        "Only JPEG, PNG and WebP images are allowed"
-      );
-    }
-  });
-
-  it("rejects a file over the size limit with 413", async () => {
-    const auth = await authFor(["UPLOAD"]);
-    const res = await upload(auth, Buffer.alloc(MAX_UPLOAD_BYTES + 1024));
-    expect(res.status).toBe(413);
-    expect(res.body.message).toBe("File is too large");
-  });
-
-  it("requires a file", async () => {
-    const auth = await authFor(["UPLOAD"]);
-    const res = await request(app)
-      .post(`${UPLOADS}/images`)
-      .set(auth)
-      .field("folder", "general");
-    expect(res.status).toBe(400);
-  });
-
-  it("requires a login and the UPLOAD page, and writes nothing to disk otherwise", async () => {
-    const image = await makeImage("png");
-    const before = await tempFiles();
-
-    const anonymous = await upload({}, image);
-    expect(anonymous.status).toBe(401);
-
-    const noAccess = await upload(await authFor(["ROLE"]), image);
-    expect(noAccess.status).toBe(403);
-
-    expect(await tempFiles()).toEqual(before);
-    expect(await prisma.uploadedFile.count()).toBe(0);
-  });
-
   it("leaves no temp files behind after success or failure", async () => {
-    const auth = await authFor(["UPLOAD"]);
+    const { auth } = await adminWith(["UPLOAD"]);
     await upload(auth, await makeImage("png"));
     await upload(auth, Buffer.from("not an image"), {
       filename: "x.png",
@@ -189,9 +198,16 @@ describe("POST /admin/uploads/images", () => {
   });
 });
 
-describe("GET and DELETE /admin/uploads", () => {
-  it("lists uploads with pagination and a folder filter", async () => {
-    const auth = await authFor(["UPLOAD"]);
+describe("GET /admin/uploads", () => {
+  it("400 for a page size above 100", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
+    expect(
+      (await request(app).get(`${UPLOADS}?limit=101`).set(auth)).status
+    ).toBe(400);
+  });
+
+  it("200 lists uploads with pagination and a folder filter", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
     await upload(auth, await makeImage("png", 200, 200));
     await upload(auth, await makeImage("png", 200, 200), { folder: "profile" });
 
@@ -206,9 +222,19 @@ describe("GET and DELETE /admin/uploads", () => {
     expect(profile.body.data.items).toHaveLength(1);
     expect(profile.body.data.items[0].folder).toBe("profile");
   });
+});
 
-  it("deletes the row and the file by ID", async () => {
-    const auth = await authFor(["UPLOAD"]);
+describe("DELETE /admin/uploads/:id", () => {
+  it("400 for a path instead of an ID", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
+    const res = await request(app)
+      .delete(`${UPLOADS}/..%2F..%2F.env`)
+      .set(auth);
+    expect(res.status).toBe(400);
+  });
+
+  it("200 deletes the row and the file; 404 the second time", async () => {
+    const { auth } = await adminWith(["UPLOAD"]);
     const { body } = await upload(auth, await makeImage("png", 200, 200));
     const { id, url } = body.data as { id: string; url: string };
     expect(existsSync(diskPath(url))).toBe(true);
@@ -221,17 +247,9 @@ describe("GET and DELETE /admin/uploads", () => {
     const again = await request(app).delete(`${UPLOADS}/${id}`).set(auth);
     expect(again.status).toBe(404);
   });
-
-  it("only accepts an ID, never a path", async () => {
-    const auth = await authFor(["UPLOAD"]);
-    const res = await request(app)
-      .delete(`${UPLOADS}/..%2F..%2F.env`)
-      .set(auth);
-    expect(res.status).toBe(400);
-  });
 });
 
-describe("deleteLocalFile", () => {
+describe("deleteLocalFile (utility)", () => {
   it("refuses to delete anything outside the upload folders", async () => {
     // A file that sits outside public/images and tmp/uploads.
     const outsideDir = path.resolve("tmp", "outside-test");

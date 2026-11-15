@@ -2,11 +2,11 @@ import express from "express";
 import { pinoHttp } from "pino-http";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
-import { logger } from "../src/config/logger.js";
-import { PasswordHasher } from "../src/core/security/PasswordHasher.js";
-import { asyncHandler } from "../src/utils/asyncHandler.js";
-import { errorHandler } from "../src/utils/errorHandler.js";
+import { createApp } from "../../src/app.js";
+import { logger } from "../../src/config/logger.js";
+import { PasswordHasher } from "../../src/core/security/PasswordHasher.js";
+import { asyncHandler } from "../../src/utils/asyncHandler.js";
+import { errorHandler } from "../../src/utils/errorHandler.js";
 import {
   app,
   closeTestApp,
@@ -14,7 +14,7 @@ import {
   prisma,
   redis,
   resetState,
-} from "./helpers/testApp.js";
+} from "../helpers/testApp.js";
 
 beforeEach(resetState);
 afterAll(closeTestApp);

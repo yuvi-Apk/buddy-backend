@@ -5,7 +5,8 @@ description: Create a new feature module in the Buddy backend (the five files, w
 
 # New module
 
-Every feature lives in `src/modules/<feature>/` and has exactly five files. Copy the shape of
+Every feature lives in `src/modules/<feature>/` and has exactly six files: the five layers plus
+`index.ts`, which builds the module and is the only file other code may import. Copy the shape of
 `src/modules/role/` (admin CRUD with a page permission). For a module the mobile app calls,
 look at `src/modules/user-auth/` for the `verifyUser` guard.
 
@@ -44,18 +45,23 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
    - Put fixed paths (`/pages`) above parameter paths (`/:id`).
 7. **Permission page** (admin modules). Add the page name to `PAGES` in
    `src/config/rbac.config.ts`. Update the two tests that list all pages
-   (`tests/rbac.test.ts`: search for `["ROLE", "UPLOAD"]`).
-8. **Wire it** in `src/container.ts`: repository → service → controller, add the controller to
-   the `Container` interface and the returned object. Then mount the router in `src/routes.ts`
-   under `/admin/<features>` or `/user/<features>`.
-9. **Tests** in `tests/<feature>.test.ts` using `tests/helpers/testApp.ts` and
-   `tests/helpers/fixtures.ts`. Cover at least:
-   - 401 without a token, 403 without the page permission, success with it
-   - validation: bad input and an unknown field both return 400
-   - 404 for a missing record and for a malformed ID (400)
-   - ownership: one caller cannot read or change another caller's record
-   - the response never contains hashes or other internal fields
-   - list: pagination metadata and `limit` above 100 rejected
+   (`tests/modules/role.test.ts` and `tests/modules/admin-auth.test.ts`: search for `["ROLE", "UPLOAD"]`).
+8. **`index.ts`**: `create<Feature>Module(infra, deps)` builds repository → service →
+   controller and returns `{ service?, router: (deps: RouterDeps) => create<Feature>Router(...) }`.
+   Export only the types other code needs (`export type { <Feature>Service, <Feature>Dto }`).
+   Copy `src/modules/role/index.ts`. To use another module, import from its `index.js` only.
+9. **Wire it**: one line in `src/container.ts` (`const <feature> = create<Feature>Module(infra, {...})`,
+   then add it to `modules`), and one line in `src/routes.ts`
+   (`router.use("/admin/<features>", modules.<feature>.router(deps))`).
+10. **Tests** in `tests/modules/<feature>.test.ts`, one `describe("<METHOD> <path>")` per endpoint, using
+    `tests/helpers/auth.ts`, `tests/helpers/guards.ts`, `tests/helpers/testApp.ts` and
+    `tests/helpers/fixtures.ts`. Cover at least:
+    - 401 without a token, 403 without the page permission, success with it
+    - validation: bad input and an unknown field both return 400
+    - 404 for a missing record and for a malformed ID (400)
+    - ownership: one caller cannot read or change another caller's record
+    - the response never contains hashes or other internal fields
+    - list: pagination metadata and `limit` above 100 rejected
 
 ## Finish
 
@@ -64,4 +70,4 @@ Run `pnpm lint`, `pnpm typecheck` and `pnpm test`. All three must pass.
 `tests/guardrails/eslint-rules.test.ts` covers the import rules.
 
 If you added an env variable, follow "Env files" in `CLAUDE.md`. If you added a package, say
-why in the commit message. Then commit.
+why in the commit message. Then stop and give the user the commit message. Do not commit.

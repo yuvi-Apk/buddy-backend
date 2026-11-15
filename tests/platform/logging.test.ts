@@ -5,7 +5,7 @@ import pino from "pino";
 import { pinoHttp } from "pino-http";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { loggerOptions } from "../src/config/logger.js";
+import { loggerOptions } from "../../src/config/logger.js";
 
 /** A logger with the app's real options that writes into a string instead of stdout. */
 function captureLogger() {

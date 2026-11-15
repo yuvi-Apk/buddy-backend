@@ -4,12 +4,12 @@ import { pinoHttp } from "pino-http";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { createApp } from "../src/app.js";
-import { logger } from "../src/config/logger.js";
-import { createContainer } from "../src/container.js";
-import { ApiError } from "../src/utils/ApiError.js";
-import { asyncHandler } from "../src/utils/asyncHandler.js";
-import { errorHandler } from "../src/utils/errorHandler.js";
+import { createApp } from "../../src/app.js";
+import { logger } from "../../src/config/logger.js";
+import { createContainer } from "../../src/container.js";
+import { ApiError } from "../../src/utils/ApiError.js";
+import { asyncHandler } from "../../src/utils/asyncHandler.js";
+import { errorHandler } from "../../src/utils/errorHandler.js";
 
 const app = createApp(createContainer());
 

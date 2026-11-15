@@ -3,17 +3,17 @@ import { pinoHttp } from "pino-http";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { logger } from "../src/config/logger.js";
-import { createRateLimiter } from "../src/middlewares/rateLimit.middleware.js";
-import { validate } from "../src/middlewares/validate.middleware.js";
-import { errorHandler } from "../src/utils/errorHandler.js";
+import { logger } from "../../src/config/logger.js";
+import { createRateLimiter } from "../../src/middlewares/rateLimit.middleware.js";
+import { validate } from "../../src/middlewares/validate.middleware.js";
+import { errorHandler } from "../../src/utils/errorHandler.js";
 import {
   MAX_PAGE_SIZE,
   paginated,
   paginationQuery,
   toSkipTake,
-} from "../src/utils/pagination.js";
-import { closeTestApp, redis, resetState } from "./helpers/testApp.js";
+} from "../../src/utils/pagination.js";
+import { closeTestApp, redis, resetState } from "../helpers/testApp.js";
 
 beforeEach(resetState);
 afterAll(closeTestApp);
