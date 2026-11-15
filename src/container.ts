@@ -11,6 +11,10 @@ import { OtpService } from "./core/otp/OtpService.js";
 import { PermissionService } from "./core/permissions/PermissionService.js";
 import { PasswordHasher } from "./core/security/PasswordHasher.js";
 import { TokenService } from "./core/security/TokenService.js";
+import {
+  LocalStorageProvider,
+  type StorageProvider,
+} from "./core/storage/StorageProvider.js";
 import type { PageName } from "./config/rbac.config.js";
 import {
   createPermissionGuards,
@@ -30,6 +34,9 @@ import { RoleService } from "./modules/role/role.service.js";
 import { SessionController } from "./modules/session/session.controller.js";
 import { SessionRepository } from "./modules/session/session.repository.js";
 import { SessionService } from "./modules/session/session.service.js";
+import { UploadController } from "./modules/upload/upload.controller.js";
+import { UploadRepository } from "./modules/upload/upload.repository.js";
+import { UploadService } from "./modules/upload/upload.service.js";
 import { UserAuthController } from "./modules/user-auth/user-auth.controller.js";
 import { UserAuthRepository } from "./modules/user-auth/user-auth.repository.js";
 import { UserAuthService } from "./modules/user-auth/user-auth.service.js";
@@ -57,6 +64,7 @@ export interface Container {
   userAuthController: UserAuthController;
   permissionService: PermissionService;
   roleController: RoleController;
+  uploadController: UploadController;
 
   healthChecks: Record<string, HealthCheck>;
   /** Closes database and cache connections. Called on shutdown and after tests. */
@@ -66,11 +74,13 @@ export interface Container {
 /** Parts that tests (or a different deployment) may swap for their own implementation. */
 export interface ContainerOverrides {
   otpSender?: OtpSender;
+  passwordHasher?: PasswordHasher;
+  storage?: StorageProvider;
 }
 
 export function createContainer(overrides: ContainerOverrides = {}): Container {
   // --- infrastructure ---
-  const passwordHasher = new PasswordHasher();
+  const passwordHasher = overrides.passwordHasher ?? new PasswordHasher();
   const tokenService = new TokenService({
     adminSecret: env.ADMIN_ACCESS_TOKEN_SECRET,
     userSecret: env.USER_ACCESS_TOKEN_SECRET,
@@ -80,6 +90,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const otpService = new OtpService(redis, env.OTP_HMAC_SECRET);
   // OTP_SENDER has one value today ("log"). Add a case here with each new SMS provider.
   const otpSender = overrides.otpSender ?? new LogOtpSender(logger);
+  // STORAGE_DRIVER has one value today ("local"). Add a case here with each new provider.
+  const storage = overrides.storage ?? new LocalStorageProvider();
 
   // --- session ---
   const sessionRepository = new SessionRepository(prisma);
@@ -124,6 +136,11 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   );
   const userAuthController = new UserAuthController(userAuthService);
 
+  // --- uploads ---
+  const uploadRepository = new UploadRepository(prisma);
+  const uploadService = new UploadService(uploadRepository, storage);
+  const uploadController = new UploadController(uploadService);
+
   // --- guards ---
   const guards: Guards = {
     verifyAdmin: createVerifyAdmin({
@@ -151,6 +168,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     userAuthController,
     permissionService,
     roleController,
+    uploadController,
 
     healthChecks: {
       postgres: async () => {

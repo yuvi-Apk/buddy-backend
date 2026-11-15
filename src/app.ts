@@ -7,6 +7,10 @@ import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
+import {
+  PUBLIC_IMAGES_DIR,
+  PUBLIC_IMAGES_URL,
+} from "./config/upload.config.js";
 import type { Container } from "./container.js";
 import { notFound } from "./middlewares/notFound.middleware.js";
 import { createApiRouter } from "./routes.js";
@@ -43,10 +47,26 @@ export function createApp(container: Container): Express {
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
 
-  // 5. Routes.
+  // 5. Uploaded images (local storage only). Files are served as-is, never executed.
+  if (env.STORAGE_DRIVER === "local") {
+    app.use(
+      PUBLIC_IMAGES_URL,
+      express.static(PUBLIC_IMAGES_DIR, {
+        index: false,
+        dotfiles: "deny",
+        fallthrough: false,
+        setHeaders: (res) => {
+          // Lets the admin panel and app show images hosted on this API's domain.
+          res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        },
+      })
+    );
+  }
+
+  // 6. Routes.
   app.use(API_PREFIX, createApiRouter(container));
 
-  // 6. Fallbacks. These two must stay last.
+  // 7. Fallbacks. These two must stay last.
   app.use(notFound);
   app.use(errorHandler);
 

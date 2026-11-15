@@ -6,6 +6,7 @@ import { ownAccountRoute } from "./middlewares/routeGuard.js";
 import { createAdminAuthRouter } from "./modules/admin-auth/admin-auth.routes.js";
 import { createRoleRouter } from "./modules/role/role.routes.js";
 import { createSessionRouter } from "./modules/session/session.routes.js";
+import { createUploadRouter } from "./modules/upload/upload.routes.js";
 import { createUserAuthRouter } from "./modules/user-auth/user-auth.routes.js";
 
 export function createApiRouter(container: Container): Router {
@@ -37,6 +38,14 @@ export function createApiRouter(container: Container): Router {
   router.use(
     "/admin/roles",
     createRoleRouter(container.roleController, {
+      verifyAdmin: guards.verifyAdmin,
+      requirePermission: guards.requirePermission,
+    })
+  );
+
+  router.use(
+    "/admin/uploads",
+    createUploadRouter(container.uploadController, {
       verifyAdmin: guards.verifyAdmin,
       requirePermission: guards.requirePermission,
     })

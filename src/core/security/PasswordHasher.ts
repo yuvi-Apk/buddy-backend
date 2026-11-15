@@ -3,8 +3,13 @@
 // The cost values are saved inside each hash, so they can be raised later without breaking old ones.
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 
+export interface ScryptCost {
+  N: number;
+  r: number;
+  p: number;
+}
 // OWASP-recommended scrypt settings: N=2^15, r=8, p=3.
-const COST = { N: 2 ** 15, r: 8, p: 3 } as const;
+const DEFAULT_COST: ScryptCost = { N: 2 ** 15, r: 8, p: 3 };
 const KEY_LENGTH = 64;
 const SALT_LENGTH = 16;
 const MAX_MEMORY = 128 * 1024 * 1024;
@@ -12,7 +17,7 @@ const MAX_MEMORY = 128 * 1024 * 1024;
 function derive(
   password: string,
   salt: Buffer,
-  cost: { N: number; r: number; p: number },
+  cost: ScryptCost,
   keyLength: number
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -27,14 +32,16 @@ function derive(
 }
 
 export class PasswordHasher {
+  constructor(private readonly cost: ScryptCost = DEFAULT_COST) {}
+
   async hash(password: string): Promise<string> {
     const salt = randomBytes(SALT_LENGTH);
-    const key = await derive(password, salt, COST, KEY_LENGTH);
+    const key = await derive(password, salt, this.cost, KEY_LENGTH);
     return [
       "scrypt",
-      COST.N,
-      COST.r,
-      COST.p,
+      this.cost.N,
+      this.cost.r,
+      this.cost.p,
       salt.toString("base64"),
       key.toString("base64"),
     ].join("$");

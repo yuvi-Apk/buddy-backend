@@ -2,6 +2,7 @@
 // RULES.md #10: the client only ever sees a safe, fixed message. The real error goes to the log.
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { MulterError } from "multer";
 import { ZodError } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { ApiError } from "./ApiError.js";
@@ -85,6 +86,13 @@ export const errorHandler = (
     }
     req.log.error({ err }, "Unmapped Prisma error");
     return res.status(500).json(body("Internal Server Error"));
+  }
+
+  /* UPLOAD ERRORS */
+  if (err instanceof MulterError) {
+    return err.code === "LIMIT_FILE_SIZE"
+      ? res.status(413).json(body("File is too large"))
+      : res.status(400).json(body("Invalid file upload"));
   }
 
   /* JWT ERRORS: TokenExpiredError extends JsonWebTokenError, so it is checked first */

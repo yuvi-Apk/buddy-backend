@@ -51,8 +51,9 @@ model AdminUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  role     Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  role     Role           @relation(fields: [roleId], references: [id], onDelete: Restrict)
   sessions Session[]
+  uploads  UploadedFile[]
 
   @@index([roleId])
 }
@@ -106,4 +107,24 @@ model Session {
   @@index([adminUserId])
   @@index([userId])
   @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Uploads: one row per stored file, so files can be listed, audited and deleted safely
+// ---------------------------------------------------------------------------
+
+model UploadedFile {
+  id          String   @id @default(uuid())
+  url         String   @unique
+  folder      String
+  contentType String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  // Kept when the admin is deleted, so the file can still be found and cleaned up.
+  uploadedByAdminId String?
+  uploadedBy        AdminUser? @relation(fields: [uploadedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([folder, createdAt])
+  @@index([uploadedByAdminId])
 }
