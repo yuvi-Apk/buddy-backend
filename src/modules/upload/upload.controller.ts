@@ -12,7 +12,7 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   uploadImage = async (req: Request, res: Response) => {
-    if (!req.adminUser) throw ApiError.unauthorized();
+    if (!req.admin) throw ApiError.unauthorized();
     if (!req.file)
       throw ApiError.badRequest('Send the image in the "image" field');
     const { folder } = req.validated.body as UploadImageBody;
@@ -20,7 +20,7 @@ export class UploadController {
     const data = await this.uploadService.uploadImage({
       tempPath: req.file.path,
       folder,
-      adminUserId: req.adminUser.id,
+      uploadedByAdminId: req.admin.id,
     });
     res.status(201).json(new ApiResponse(201, data, "Image uploaded"));
   };

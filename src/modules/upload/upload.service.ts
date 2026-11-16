@@ -16,7 +16,7 @@ export class UploadService {
   async uploadImage(input: {
     tempPath: string;
     folder: UploadFolder;
-    adminUserId: string;
+    uploadedByAdminId: string;
   }): Promise<UploadedFileDto> {
     const image = await uploadAndCompressImage(
       input.tempPath,
@@ -28,7 +28,7 @@ export class UploadService {
       return await this.uploads.create({
         ...image,
         folder: input.folder,
-        uploadedByAdminId: input.adminUserId,
+        uploadedByAdminId: input.uploadedByAdminId,
       });
     } catch (err) {
       // Do not leave a stored file behind without a database row.

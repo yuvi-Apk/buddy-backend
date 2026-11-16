@@ -6,9 +6,10 @@ import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
 import { redis } from "./config/redis.js";
 import type { HealthCheck } from "./core/health/health.routes.js";
-import { LogOtpSender, type OtpSender } from "./core/otp/OtpSender.js";
-import { OtpService } from "./core/otp/OtpService.js";
-import { PasswordHasher } from "./core/security/PasswordHasher.js";
+import {
+  GoogleIdTokenVerifier,
+  type GoogleTokenVerifier,
+} from "./core/security/GoogleIdTokenVerifier.js";
 import { TokenService } from "./core/security/TokenService.js";
 import {
   LocalStorageProvider,
@@ -41,47 +42,44 @@ function healthChecks(): Record<string, HealthCheck> {
 
 // Parts that tests (or a different deployment) may swap for their own implementation.
 export interface ContainerOverrides {
-  otpSender?: OtpSender;
-  passwordHasher?: PasswordHasher;
+  googleTokenVerifier?: GoogleTokenVerifier;
   storage?: StorageProvider;
 }
 
 export type Container = ReturnType<typeof createContainer>;
 
 export function createContainer(overrides: ContainerOverrides = {}) {
-  // --- infrastructure ---
+  // Infrastructure
   const infra: Infra = { prisma, redis, logger };
-  const passwordHasher = overrides.passwordHasher ?? new PasswordHasher();
   const tokenService = new TokenService({
     adminSecret: env.ADMIN_ACCESS_TOKEN_SECRET,
     userSecret: env.USER_ACCESS_TOKEN_SECRET,
     accessTokenTtlMinutes: env.ACCESS_TOKEN_TTL_MINUTES,
   });
   const rateLimiters = createRateLimiters(redis);
-  const otpService = new OtpService(redis, env.OTP_HMAC_SECRET);
-  // OTP_SENDER has one value today ("log"). Add a case here with each new SMS provider.
-  const otpSender = overrides.otpSender ?? new LogOtpSender(logger);
+  const googleTokenVerifier =
+    overrides.googleTokenVerifier ??
+    new GoogleIdTokenVerifier(redis, env.GOOGLE_CLIENT_IDS);
   // STORAGE_DRIVER has one value today ("local"). Add a case here with each new provider.
   const storage = overrides.storage ?? new LocalStorageProvider();
 
-  // --- modules (one line each; add new modules at the end) ---
+  // Modules (one line each; add new modules at the end)
   const session = createSessionModule(infra, { tokenService });
   const role = createRoleModule(infra);
   const adminAuth = createAdminAuthModule(infra, {
     sessionService: session.service,
     tokenService,
-    passwordHasher,
+    googleTokenVerifier,
     permissionService: role.permissionService,
   });
   const userAuth = createUserAuthModule(infra, {
     sessionService: session.service,
     tokenService,
-    otpService,
-    otpSender,
+    googleTokenVerifier,
   });
   const upload = createUploadModule(infra, { storage });
 
-  // --- guards ---
+  // Guards
   const guards: Guards = {
     verifyAdmin: createVerifyAdmin({
       tokenService,
@@ -100,7 +98,6 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     modules: { session, role, adminAuth, userAuth, upload },
     guards,
     rateLimiters,
-    passwordHasher,
     tokenService,
 
     healthChecks: healthChecks(),

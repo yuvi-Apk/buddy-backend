@@ -39,19 +39,18 @@ export function createVerifyAdmin({
     const token = accessTokenFrom(req);
     if (!token) throw ApiError.unauthorized();
 
-    const { adminUserId, sessionId } =
-      tokenService.verifyAdminAccessToken(token);
-    const subject = { type: "ADMIN", id: adminUserId } as const;
+    const { adminId, sessionId } = tokenService.verifyAdminAccessToken(token);
+    const owner = { type: "ADMIN", id: adminId } as const;
 
-    if (!(await sessionService.isActive(sessionId, subject))) {
+    if (!(await sessionService.isActive(sessionId, owner))) {
       throw ApiError.unauthorized();
     }
 
-    const adminUser = await adminAuthService.getAuthenticatedAdmin(adminUserId);
-    if (!adminUser) throw ApiError.unauthorized();
+    const admin = await adminAuthService.findAuthenticatedAdmin(adminId);
+    if (!admin) throw ApiError.unauthorized();
 
-    req.adminUser = adminUser;
-    req.auth = { subject, sessionId };
+    req.admin = admin;
+    req.auth = { owner, sessionId };
     next();
   });
 
@@ -65,12 +64,9 @@ export function createPermissionGuards(permissionService: PermissionService) {
   const requirePermission = (page: PageName): RequestHandler =>
     markGuard(
       asyncHandler(async (req, _res, next) => {
-        if (!req.adminUser) throw ApiError.unauthorized();
+        if (!req.admin) throw ApiError.unauthorized();
 
-        const allowed = await permissionService.hasAccess(
-          req.adminUser.role,
-          page
-        );
+        const allowed = await permissionService.hasAccess(req.admin.role, page);
         if (!allowed) throw ApiError.forbidden("Forbidden: No permission");
         next();
       }),
@@ -81,10 +77,10 @@ export function createPermissionGuards(permissionService: PermissionService) {
   const requireAnyPermission = (pages: PageName[]): RequestHandler =>
     markGuard(
       asyncHandler(async (req, _res, next) => {
-        if (!req.adminUser) throw ApiError.unauthorized();
+        if (!req.admin) throw ApiError.unauthorized();
 
         const allowed = await permissionService.hasAnyAccess(
-          req.adminUser.role,
+          req.admin.role,
           pages
         );
         if (!allowed) throw ApiError.forbidden("Forbidden: No permission");

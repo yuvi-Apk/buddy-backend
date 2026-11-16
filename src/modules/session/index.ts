@@ -37,6 +37,7 @@ export type { SessionService } from "./session.service.js";
 export type {
   ClientInfo,
   IssuedSession,
-  Subject,
-  SubjectType,
+  SessionDto,
+  SessionOwner,
+  SessionOwnerType,
 } from "./session.schema.js";

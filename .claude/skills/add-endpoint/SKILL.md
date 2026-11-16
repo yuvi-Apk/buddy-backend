@@ -21,14 +21,14 @@ uses it. `src/modules/role/` is the reference for every step; the rules are in
    - Expected failures throw `ApiError` (`badRequest`, `notFound`, `conflict`, `forbidden`).
    - If the change affects cached data, invalidate the cache here (see `RoleService.update`).
 4. **Controller** (`<feature>.controller.ts`): add an arrow-property method. Input comes from
-   `req.validated` only. The caller comes from `req.adminUser`, `req.user` or `req.auth`.
+   `req.validated` only. The caller comes from `req.admin`, `req.user` or `req.auth`.
    Respond with `res.status(n).json(new ApiResponse(n, data, "message"))`: 201 for create,
    200 otherwise.
 5. **Route** (`<feature>.routes.ts`): add the route as guard(s) → `validate({...})` →
    `asyncHandler(controller.method)`. Fixed paths go above `/:id` paths.
 6. **Test** (`tests/modules/<feature>.test.ts`): add a `describe("<METHOD> <path>")` block
    with tests in the order guard (401/403) → 400 → 404 / not the owner → rule failures → success.
-   Use `adminWith`, `superAdmin`, `loginUser` from `tests/helpers/auth.ts` and
+   Use `adminWith`, `superAdmin`, `signInUser` from `tests/helpers/auth.ts` and
    `expectAdminPageRequired` from `tests/helpers/guards.ts`.
 7. **index.ts**: only if another module needs a new type, export it from `index.ts` with
    `export type`. The router function there already picks up the new route.

@@ -3,27 +3,21 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { clientInfo } from "../../utils/clientInfo.js";
 import type {
-  RequestOtpBody,
+  UserGoogleSignInBody,
   UserRefreshBody,
-  VerifyOtpBody,
 } from "./user-auth.schema.js";
 import type { UserAuthService } from "./user-auth.service.js";
 
 export class UserAuthController {
   constructor(private readonly userAuthService: UserAuthService) {}
 
-  requestOtp = async (req: Request, res: Response) => {
-    const { phone } = req.validated.body as RequestOtpBody;
-    await this.userAuthService.requestOtp(phone);
-
-    // Same answer for new and existing numbers.
-    res.status(200).json(new ApiResponse(200, null, "Code sent"));
-  };
-
-  verifyOtp = async (req: Request, res: Response) => {
-    const input = req.validated.body as VerifyOtpBody;
-    const result = await this.userAuthService.verifyOtp(input, clientInfo(req));
-    res.status(200).json(new ApiResponse(200, result, "Logged in"));
+  signInWithGoogle = async (req: Request, res: Response) => {
+    const { idToken } = req.validated.body as UserGoogleSignInBody;
+    const result = await this.userAuthService.signInWithGoogle(
+      idToken,
+      clientInfo(req)
+    );
+    res.status(200).json(new ApiResponse(200, result, "Signed in"));
   };
 
   refresh = async (req: Request, res: Response) => {
@@ -39,6 +33,14 @@ export class UserAuthController {
     if (!req.auth) throw ApiError.unauthorized();
     await this.userAuthService.logout(req.auth.sessionId);
     res.status(200).json(new ApiResponse(200, null, "Logged out"));
+  };
+
+  logoutAllDevices = async (req: Request, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized();
+    await this.userAuthService.logoutAllDevices(req.user.id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, null, "Logged out of all devices"));
   };
 
   me = (req: Request, res: Response) => {

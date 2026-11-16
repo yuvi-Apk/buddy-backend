@@ -3,9 +3,9 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { clientInfo } from "../../utils/clientInfo.js";
 import type {
-  AdminLoginBody,
-  AdminLoginResult,
+  AdminGoogleSignInBody,
   AdminRefreshBody,
+  AdminSignInResult,
 } from "./admin-auth.schema.js";
 import type { AdminAuthService } from "./admin-auth.service.js";
 
@@ -26,14 +26,17 @@ export class AdminAuthController {
     private readonly cookies: AdminCookieConfig
   ) {}
 
-  login = async (req: Request, res: Response) => {
-    const input = req.validated.body as AdminLoginBody;
-    const result = await this.adminAuthService.login(input, clientInfo(req));
+  signInWithGoogle = async (req: Request, res: Response) => {
+    const { idToken } = req.validated.body as AdminGoogleSignInBody;
+    const result = await this.adminAuthService.signInWithGoogle(
+      idToken,
+      clientInfo(req)
+    );
 
     this.setAuthCookies(res, result);
     res
       .status(200)
-      .json(new ApiResponse(200, this.toBody(result), "Logged in"));
+      .json(new ApiResponse(200, this.toBody(result), "Signed in"));
   };
 
   refresh = async (req: Request, res: Response) => {
@@ -67,17 +70,19 @@ export class AdminAuthController {
   };
 
   me = async (req: Request, res: Response) => {
-    if (!req.adminUser) throw ApiError.unauthorized();
-    const pages = await this.adminAuthService.allowedPages(req.adminUser);
-    const data = { ...req.adminUser, pages };
+    if (!req.admin) throw ApiError.unauthorized();
+    const pages = await this.adminAuthService.listAllowedPages(req.admin);
+    const data = { ...req.admin, pages };
     res.status(200).json(new ApiResponse(200, data, "Profile fetched"));
   };
 
-  // --- helpers ---------------------------------------------------------------
+  // ===========================================================================
+  // Helpers
+  // ===========================================================================
 
   // The refresh token is never put in the response body: for the admin panel it lives only
   // in an httpOnly cookie, where page scripts cannot read it.
-  private toBody(result: AdminLoginResult) {
+  private toBody(result: AdminSignInResult) {
     return { accessToken: result.accessToken, admin: result.admin };
   }
 
@@ -85,7 +90,7 @@ export class AdminAuthController {
     return { httpOnly: true, secure: this.cookies.secure, sameSite: "strict" };
   }
 
-  private setAuthCookies(res: Response, result: AdminLoginResult): void {
+  private setAuthCookies(res: Response, result: AdminSignInResult): void {
     res.cookie(ACCESS_COOKIE, result.accessToken, {
       ...this.baseCookie(),
       path: "/",

@@ -1,11 +1,10 @@
 import { z } from "zod";
 
-export const adminLoginBody = z.strictObject({
-  email: z.email().max(254).toLowerCase(),
-  // No strength rules at login: any length mismatch would reveal the password policy.
-  password: z.string().min(1).max(200),
+// The ID token from "Sign in with Google" on the admin panel.
+export const adminGoogleSignInBody = z.strictObject({
+  idToken: z.string().min(1).max(4096),
 });
-export type AdminLoginBody = z.infer<typeof adminLoginBody>;
+export type AdminGoogleSignInBody = z.infer<typeof adminGoogleSignInBody>;
 
 // The admin panel sends the refresh token as a cookie. A body value is accepted for API clients.
 export const adminRefreshBody = z.strictObject({
@@ -13,18 +12,19 @@ export const adminRefreshBody = z.strictObject({
 });
 export type AdminRefreshBody = z.infer<typeof adminRefreshBody>;
 
-// The logged-in admin, attached to the request as req.adminUser by verifyAdmin.
+// The signed-in admin, attached to the request as req.admin by verifyAdmin.
 export interface AuthenticatedAdmin {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: {
     id: string;
     name: string;
   };
 }
 
-export interface AdminLoginResult {
+export interface AdminSignInResult {
   accessToken: string;
   refreshToken: string;
   refreshTokenExpiresAt: Date;

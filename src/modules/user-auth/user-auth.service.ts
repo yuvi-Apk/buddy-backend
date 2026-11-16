@@ -1,5 +1,4 @@
-import type { OtpSender } from "../../core/otp/OtpSender.js";
-import type { OtpService } from "../../core/otp/OtpService.js";
+import type { GoogleTokenVerifier } from "../../core/security/GoogleIdTokenVerifier.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import { ApiError } from "../../utils/ApiError.js";
 import type {
@@ -10,8 +9,7 @@ import type {
 import type { UserAuthRepository } from "./user-auth.repository.js";
 import type {
   AuthenticatedUser,
-  UserLoginResult,
-  VerifyOtpBody,
+  UserSignInResult,
 } from "./user-auth.schema.js";
 
 export class UserAuthService {
@@ -19,27 +17,19 @@ export class UserAuthService {
     private readonly users: UserAuthRepository,
     private readonly sessions: SessionService,
     private readonly tokens: TokenService,
-    private readonly otp: OtpService,
-    private readonly otpSender: OtpSender
+    private readonly google: GoogleTokenVerifier
   ) {}
 
-  // Sends a login code. The account itself is only created once the code is verified.
-  async requestOtp(phone: string): Promise<void> {
-    const code = await this.otp.issue(phone);
-    await this.otpSender.send(phone, code);
-  }
-
-  async verifyOtp(
-    { phone, otp }: VerifyOtpBody,
+  // Creates the account on first sign-in. Other devices stay signed in.
+  async signInWithGoogle(
+    idToken: string,
     client: ClientInfo
-  ): Promise<UserLoginResult> {
-    // core-rules #14: one message for a wrong code, an expired code and a disabled account.
-    const invalid = ApiError.unauthorized("Invalid or expired code");
+  ): Promise<UserSignInResult> {
+    const identity = await this.google.verify(idToken);
 
-    if (!(await this.otp.verify(phone, otp))) throw invalid;
-
-    const { isActive, ...user } = await this.users.findOrCreateByPhone(phone);
-    if (!isActive) throw invalid;
+    const { isActive, ...user } = await this.users.upsertFromGoogle(identity);
+    // core-rules #14: same message as a bad token.
+    if (!isActive) throw ApiError.unauthorized("Google sign-in failed");
 
     const session = await this.sessions.create(
       { type: "USER", id: user.id },
@@ -51,12 +41,12 @@ export class UserAuthService {
   async refresh(
     refreshToken: string,
     client: ClientInfo
-  ): Promise<UserLoginResult> {
+  ): Promise<UserSignInResult> {
     const rotated = await this.sessions.rotate(refreshToken, "USER", client);
 
-    const user = await this.users.findActiveProfile(rotated.subject.id);
+    const user = await this.users.findActiveProfile(rotated.owner.id);
     if (!user) {
-      // The account was disabled after login: end the session.
+      // Disabled after sign-in: end the session.
       await this.sessions.revoke(rotated.sessionId);
       throw ApiError.unauthorized("Invalid refresh token");
     }
@@ -67,15 +57,19 @@ export class UserAuthService {
     return this.sessions.revoke(sessionId);
   }
 
+  logoutAllDevices(userId: string): Promise<void> {
+    return this.sessions.revokeAllForOwner({ type: "USER", id: userId });
+  }
+
   // Used by verifyUser on every request. Null when the account is missing or disabled.
-  getAuthenticatedUser(userId: string): Promise<AuthenticatedUser | null> {
+  findAuthenticatedUser(userId: string): Promise<AuthenticatedUser | null> {
     return this.users.findActiveProfile(userId);
   }
 
   private toResult(
     user: AuthenticatedUser,
     session: IssuedSession
-  ): UserLoginResult {
+  ): UserSignInResult {
     return {
       accessToken: this.tokens.signUserAccessToken({
         userId: user.id,

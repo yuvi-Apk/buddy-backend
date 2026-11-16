@@ -10,7 +10,7 @@ paths:
 ## Queries
 
 - Every query has an explicit `select`. Never return a whole row (core-rules #9).
-- Never return a password, OTP or token hash unless the method name says so (`findWithPasswordHash`).
+- Never return a token hash unless the method name says so (`findPreviousRefreshTokenHash`).
 - Organization-owned tables get a required `organizationId` column with an index, and every
   repository method for them takes `organizationId` as a required argument.
 - Several writes that must succeed together: `this.prisma.$transaction(...)`.

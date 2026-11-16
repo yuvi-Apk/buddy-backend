@@ -26,7 +26,7 @@ const ISSUER = "buddy-api";
 const ALGORITHM = "HS256";
 
 const adminPayloadSchema = z.object({
-  adminUserId: z.uuid(),
+  adminId: z.uuid(),
   sessionId: z.uuid(),
 });
 const userPayloadSchema = z.object({

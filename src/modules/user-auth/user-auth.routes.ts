@@ -3,11 +3,7 @@ import { publicRoute } from "../../middlewares/routeGuard.js";
 import { validate } from "../../middlewares/validate.middleware.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import type { UserAuthController } from "./user-auth.controller.js";
-import {
-  requestOtpBody,
-  userRefreshBody,
-  verifyOtpBody,
-} from "./user-auth.schema.js";
+import { userGoogleSignInBody, userRefreshBody } from "./user-auth.schema.js";
 
 interface Deps {
   verifyUser: RequestHandler;
@@ -21,19 +17,11 @@ export function createUserAuthRouter(
   const router = Router();
 
   router.post(
-    "/otp/request",
+    "/google",
     publicRoute(),
     authRateLimit,
-    validate({ body: requestOtpBody }),
-    asyncHandler(controller.requestOtp)
-  );
-
-  router.post(
-    "/otp/verify",
-    publicRoute(),
-    authRateLimit,
-    validate({ body: verifyOtpBody }),
-    asyncHandler(controller.verifyOtp)
+    validate({ body: userGoogleSignInBody }),
+    asyncHandler(controller.signInWithGoogle)
   );
 
   router.post(
@@ -45,6 +33,12 @@ export function createUserAuthRouter(
   );
 
   router.post("/logout", verifyUser, asyncHandler(controller.logout));
+
+  router.post(
+    "/logout-all",
+    verifyUser,
+    asyncHandler(controller.logoutAllDevices)
+  );
 
   router.get("/me", verifyUser, controller.me);
 

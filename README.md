@@ -2,8 +2,10 @@
 
 The API behind Buddy, an AI education platform. It serves two clients:
 
-- the **mobile app** for students, who log in with their phone number and a one-time code
-- the **admin panel** for staff, who log in with email and password and see only the pages their role allows
+- the **user panel** (app) for individuals, students, teachers and organization admins, who sign
+  in with Google on any number of devices
+- the **super admin panel** for staff, who sign in with Google on one device at a time and see only
+  the pages their role allows
 
 Today it holds the foundation: authentication, sessions, roles and permissions, uploads, and the
 guardrails every future feature (schools, classes, books, the AI tutor) will be built on.
@@ -13,7 +15,7 @@ guardrails every future feature (schools, classes, books, the AI tutor) will be 
 | Runtime    | Node 22, pnpm, TypeScript (ESM: imports end in `.js`)  |
 | HTTP       | Express 5, every route under `/api/v1`                 |
 | Database   | PostgreSQL through Prisma 7                            |
-| Cache      | Redis: sessions, login codes, rate limits, permissions |
+| Cache      | Redis: sessions, Google keys, rate limits, permissions |
 | Validation | Zod, for every request and for the environment         |
 | Tests      | Vitest + supertest against real Postgres and Redis     |
 
@@ -30,14 +32,16 @@ pnpm db:seed                    # create the SUPER_ADMIN role and the first admi
 pnpm dev                        # http://localhost:4000/api/v1/health/ready
 ```
 
-In `.env`, set three **different** random secrets of at least 32 characters
-(`ADMIN_ACCESS_TOKEN_SECRET`, `USER_ACCESS_TOKEN_SECRET`, `OTP_HMAC_SECRET`):
+In `.env`, set two **different** random secrets of at least 32 characters
+(`ADMIN_ACCESS_TOKEN_SECRET`, `USER_ACCESS_TOKEN_SECRET`):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
-Also set `SEED_SUPER_ADMIN_EMAIL` and `SEED_SUPER_ADMIN_PASSWORD` (12+ characters) for the first admin.
+Set `GOOGLE_CLIENT_IDS` to your OAuth client IDs (Google Cloud Console > APIs & Services >
+Credentials; web, Android and iOS, comma-separated), and `SEED_SUPER_ADMIN_EMAIL` to the Google
+account of the first super admin.
 The app refuses to start when a variable is missing or invalid, and names the variable.
 
 Ports 5432 and 6379 are databases, not websites, so a browser can't open them. To look at the data,
@@ -64,14 +68,14 @@ All routes are under `/api/v1`.
 | Area           | Routes                                                                                 | Who may call it                    |
 | -------------- | -------------------------------------------------------------------------------------- | ---------------------------------- |
 | Health         | `GET /health`, `GET /health/ready`                                                     | anyone                             |
-| Admin auth     | `POST /admin/auth/login`, `POST /admin/auth/refresh`                                   | anyone (rate limited)              |
-|                | `POST /admin/auth/logout`, `GET /admin/auth/me`                                        | logged-in admin                    |
-| Admin sessions | `GET /admin/sessions`, `DELETE /admin/sessions/:id`                                    | logged-in admin, own sessions only |
+| Admin auth     | `POST /admin/auth/google`, `POST /admin/auth/refresh`                                  | anyone (rate limited)              |
+|                | `POST /admin/auth/logout`, `GET /admin/auth/me`                                        | signed-in admin                    |
+| Admin sessions | `GET /admin/sessions`, `DELETE /admin/sessions/:id`                                    | signed-in admin, own sessions only |
 | Roles          | `GET POST /admin/roles`, `GET PATCH DELETE /admin/roles/:id`, `GET /admin/roles/pages` | admin with the `ROLE` page         |
 | Uploads        | `POST /admin/uploads/images`, `GET /admin/uploads`, `DELETE /admin/uploads/:id`        | admin with the `UPLOAD` page       |
-| User auth      | `POST /user/auth/otp/request`, `POST /user/auth/otp/verify`, `POST /user/auth/refresh` | anyone (rate limited)              |
-|                | `POST /user/auth/logout`, `GET /user/auth/me`                                          | logged-in user                     |
-| User sessions  | `GET /user/sessions`, `DELETE /user/sessions/:id`                                      | logged-in user, own sessions only  |
+| User auth      | `POST /user/auth/google`, `POST /user/auth/refresh`                                    | anyone (rate limited)              |
+|                | `POST /user/auth/logout`, `POST /user/auth/logout-all`, `GET /user/auth/me`            | signed-in user                     |
+| User sessions  | `GET /user/sessions`, `DELETE /user/sessions/:id`                                      | signed-in user, own sessions only  |
 
 Responses always have the same shape:
 

@@ -1,6 +1,6 @@
 // Role-based access control is defined here, in code.
 // A "page" is one area of the admin panel. A role is granted access page by page
-// (RolePermission.isAccess). To protect a new admin feature:
+// (AdminPermission.canAccess). To protect a new admin feature:
 //   1. add its page name to PAGES below
 //   2. guard its routes with requirePermission("<PAGE>")
 // The database only stores which role may access which page name.

@@ -7,7 +7,7 @@ import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { logger } from "../../src/config/logger.js";
 import { errorHandler } from "../../src/utils/errorHandler.js";
-import { adminWith, bearer, loginUser, superAdmin } from "../helpers/auth.js";
+import { adminWith, bearer, signInUser, superAdmin } from "../helpers/auth.js";
 import {
   app,
   closeTestApp,
@@ -94,7 +94,7 @@ describe("permission cache", () => {
 
 describe("admin and user tokens are not interchangeable", () => {
   it("rejects a user token on admin routes, in the header or the cookie", async () => {
-    const { accessToken } = await loginUser();
+    const { accessToken } = await signInUser();
 
     for (const path of ["/api/v1/admin/auth/me", "/api/v1/admin/sessions"]) {
       const viaHeader = await request(app).get(path).set(bearer(accessToken));
@@ -116,7 +116,7 @@ describe("admin and user tokens are not interchangeable", () => {
   });
 
   it("rejects a user refresh token on the admin refresh route", async () => {
-    const { refreshToken } = await loginUser();
+    const { refreshToken } = await signInUser();
     const res = await request(app)
       .post("/api/v1/admin/auth/refresh")
       .send({ refreshToken });

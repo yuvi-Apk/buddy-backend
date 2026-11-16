@@ -8,14 +8,14 @@ const REDACTED_PATHS = [
   'res.headers["set-cookie"]',
   "password",
   "*.password",
-  "otp",
-  "*.otp",
   "token",
   "*.token",
   "accessToken",
   "*.accessToken",
   "refreshToken",
   "*.refreshToken",
+  "idToken",
+  "*.idToken",
 ];
 
 export const loggerOptions: pino.LoggerOptions = {

@@ -34,13 +34,13 @@ Add the query, with an explicit `select`. Return no hashes or secrets.
 async listAdmins(roleId: string, query: ListRoleAdminsQuery) {
   const where = { roleId };
   const [items, total] = await Promise.all([
-    this.prisma.adminUser.findMany({
+    this.prisma.admin.findMany({
       where,
-      select: { id: true, name: true, email: true }, // never passwordHash
+      select: { id: true, name: true, email: true }, // never googleAccountId
       orderBy: { name: "asc" },
       ...toSkipTake(query),
     }),
-    this.prisma.adminUser.count({ where }),
+    this.prisma.admin.count({ where }),
   ]);
   return { items, total };
 }
@@ -125,7 +125,7 @@ describe("GET /admin/roles/:id/admins", () => {
     ).toBe(404);
   });
 
-  it("200 lists the role's admins without password hashes", async () => {
+  it("200 lists the role's admins without their Google ids", async () => {
     const boss = await superAdmin();
     const staff = await adminWith(["UPLOAD"]);
     const res = await request(app)
@@ -135,7 +135,7 @@ describe("GET /admin/roles/:id/admins", () => {
     expect(res.body.data.items).toEqual([
       { id: staff.admin.id, name: "Test Admin", email: "staff@buddy.test" },
     ]);
-    expect(JSON.stringify(res.body)).not.toMatch(/passwordHash/);
+    expect(JSON.stringify(res.body)).not.toMatch(/googleAccountId/);
   });
 });
 ```

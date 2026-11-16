@@ -1,5 +1,5 @@
 // Rate limiters backed by Redis, so the limit is shared by every API instance (core-rules #13, #20).
-// Limits are counted per client IP. Limits per phone number or per account live in the services.
+// Limits are counted per client IP.
 import type { RequestHandler } from "express";
 import { rateLimit } from "express-rate-limit";
 import { RedisStore, type RedisReply } from "rate-limit-redis";
@@ -42,7 +42,7 @@ export function createRateLimiter(
 export interface RateLimiters {
   // Every API route: stops one client from flooding the server.
   global: RequestHandler;
-  // Login, OTP and refresh routes: slows down password and code guessing.
+  // Sign-in and refresh routes: slows down token guessing.
   auth: RequestHandler;
 }
 

@@ -30,7 +30,7 @@ src/
   types/             express.d.ts (fields added to req), module.types.ts (wiring types)
   utils/             ApiError, ApiResponse, asyncHandler, errorHandler, pagination, upload helpers
   middlewares/       guards (verifyAdmin, verifyUser, requirePermission), validate, rate limit, upload
-  core/              shared infrastructure with no business rules: passwords, tokens, OTP,
+  core/              shared infrastructure with no business rules: Google sign-in, tokens,
                      permission cache, file storage, health check. AI clients will live in core/ai.
   modules/           one folder per feature
   generated/prisma/  generated database client (never edit, git-ignored)
@@ -99,7 +99,7 @@ and three files put them together:
   const adminAuth = createAdminAuthModule(infra, {
     sessionService: session.service,
     tokenService,
-    passwordHasher,
+    googleTokenVerifier,
     permissionService: role.permissionService,
   });
   ```
@@ -109,7 +109,7 @@ and three files put them together:
 
 - **`src/routes.ts`** mounts each module's router, one line each.
 
-Tests use the same container with a few parts swapped (a fake SMS sender, faster password hashing),
+Tests use the same container with one part swapped (a fake Google token verifier),
 so they run the real app.
 
 ## Rules you will meet

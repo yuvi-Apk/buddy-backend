@@ -1,7 +1,7 @@
 // Public entry point of the admin-auth module. Other code imports from here only.
 import { env } from "../../config/env.js";
 import type { PermissionService } from "../../core/permissions/PermissionService.js";
-import type { PasswordHasher } from "../../core/security/PasswordHasher.js";
+import type { GoogleTokenVerifier } from "../../core/security/GoogleIdTokenVerifier.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import { ownAccountRoute } from "../../middlewares/routeGuard.js";
 import type { Infra, RouterDeps } from "../../types/module.types.js";
@@ -16,7 +16,7 @@ export function createAdminAuthModule(
   deps: {
     sessionService: SessionService;
     tokenService: TokenService;
-    passwordHasher: PasswordHasher;
+    googleTokenVerifier: GoogleTokenVerifier;
     permissionService: PermissionService;
   }
 ) {
@@ -25,7 +25,7 @@ export function createAdminAuthModule(
     repository,
     deps.sessionService,
     deps.tokenService,
-    deps.passwordHasher,
+    deps.googleTokenVerifier,
     deps.permissionService,
     logger
   );

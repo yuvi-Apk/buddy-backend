@@ -21,11 +21,11 @@ export class UploadRepository {
     sizeBytes: number;
     uploadedByAdminId: string;
   }): Promise<UploadedFileDto> {
-    return this.prisma.uploadedFile.create({ data: input, select: fileSelect });
+    return this.prisma.upload.create({ data: input, select: fileSelect });
   }
 
   findById(id: string): Promise<UploadedFileDto | null> {
-    return this.prisma.uploadedFile.findUnique({
+    return this.prisma.upload.findUnique({
       where: { id },
       select: fileSelect,
     });
@@ -36,20 +36,20 @@ export class UploadRepository {
   ): Promise<{ items: UploadedFileDto[]; total: number }> {
     const where = query.folder ? { folder: query.folder } : {};
     const [items, total] = await Promise.all([
-      this.prisma.uploadedFile.findMany({
+      this.prisma.upload.findMany({
         where,
         select: fileSelect,
         orderBy: { createdAt: "desc" },
         ...toSkipTake(query),
       }),
-      this.prisma.uploadedFile.count({ where }),
+      this.prisma.upload.count({ where }),
     ]);
     return { items, total };
   }
 
   // Returns true when a row was deleted.
   async delete(id: string): Promise<boolean> {
-    const { count } = await this.prisma.uploadedFile.deleteMany({
+    const { count } = await this.prisma.upload.deleteMany({
       where: { id },
     });
     return count === 1;

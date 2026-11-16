@@ -43,9 +43,13 @@ describe("loadEnv", () => {
     expect(attempt).not.toThrow(/short-secret/);
   });
 
-  it("refuses to boot in production with the log OTP sender", () => {
-    expect(() =>
-      loadEnv({ ...valid, NODE_ENV: "production", OTP_SENDER: "log" })
-    ).toThrow(/OTP_SENDER/);
+  it("splits GOOGLE_CLIENT_IDS into a list and refuses an empty one", () => {
+    expect(loadEnv(valid).GOOGLE_CLIENT_IDS).toEqual([
+      "test-web-client.apps.googleusercontent.com",
+      "test-android-client.apps.googleusercontent.com",
+    ]);
+    expect(() => loadEnv({ ...valid, GOOGLE_CLIENT_IDS: " , " })).toThrow(
+      /GOOGLE_CLIENT_IDS/
+    );
   });
 });

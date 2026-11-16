@@ -91,7 +91,7 @@ For a change that clears a cache, check that the next request sees the change.
 | ----------------------------- | ------------------------------------------------------------ |
 | Admin with a page             | `adminWith(["<PAGE>"])`. Give a second admin its own email.  |
 | Super admin                   | `superAdmin()`                                               |
-| App user                      | `loginUser(phone)`. Give a second user a different phone.    |
+| App user                      | `signInUser(email)`. Give a second user a different email.   |
 | Row without logging in        | `createRole`, `createAdmin`, `createUser` from `fixtures.ts` |
 | Data the helpers don't create | `prisma.<model>.create(...)` inside the test                 |
 

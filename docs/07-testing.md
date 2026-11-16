@@ -1,7 +1,7 @@
 # 07 Testing
 
 Tests run the real app against a real Postgres database (`buddy_test`) and Redis (database 1), with
-the settings from `.env.test`. Nothing is mocked except the SMS sender and the password-hashing cost.
+the settings from `.env.test`. Nothing is mocked except Google: a fake verifier hands out test ID tokens.
 
 ```bash
 docker compose up -d                      # once
@@ -18,9 +18,9 @@ Files run one at a time because they share the database.
 ```
 tests/
   helpers/
-    testApp.ts     the app and container, resetState(), closeTestApp(), prisma, redis, otpSender
-    fixtures.ts    createRole, createAdmin, createSuperAdmin, createUser, TEST_PASSWORD
-    auth.ts        adminWith(pages), superAdmin(), loginAdmin(email), loginUser(phone), bearer(token)
+    testApp.ts     the app and container, resetState(), closeTestApp(), prisma, redis, googleTokenVerifier
+    fixtures.ts    createRole, createAdmin, createSuperAdmin, createUser
+    auth.ts        adminWith(pages), superAdmin(), signInAdmin(email), signInUser(email), bearer(token)
     guards.ts      expectLoginRequired(routes), expectAdminPageRequired(routes, page), MISSING_ID
   guardrails/      ESLint rules, env files, "every route has a guard"
   platform/        app shell, data stores, validate/pagination/rate limit, logging, cross-module guards
@@ -111,16 +111,16 @@ describe("POST /admin/roles", () => {
 
 ## Helpers
 
-| Helper                                    | Gives you                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------ |
-| `adminWith(["ROLE"], email?)`             | An admin whose role has those pages, logged in: `{ admin, role, token, auth }` |
-| `superAdmin()`                            | A logged-in SUPER_ADMIN: `{ admin, role, token, auth }`                        |
-| `loginUser(phone?)`                       | A logged-in app user: `{ user, accessToken, refreshToken, auth }`              |
-| `loginAdmin(email, password?)`            | The raw login response, to inspect cookies                                     |
-| `bearer(token)`                           | `{ Authorization: "Bearer ..." }` for `.set(...)`                              |
-| `createRole`, `createAdmin`, `createUser` | Rows straight in the database, without logging in                              |
-| `otpSender.codes.get(phone)`              | The last code "sent" to a phone                                                |
-| `MISSING_ID`                              | A valid UUID that matches nothing                                              |
+| Helper                                    | Gives you                                                                           |
+| ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `adminWith(["ROLE"], email?)`             | An admin whose role has those pages, signed in: `{ admin, role, token, auth }`      |
+| `superAdmin()`                            | A signed-in SUPER_ADMIN: `{ admin, role, token, auth }`                             |
+| `signInUser(email?)`                      | A signed-in app user (one more device): `{ user, accessToken, refreshToken, auth }` |
+| `signInAdmin(email, overrides?)`          | The raw sign-in response, to inspect cookies                                        |
+| `bearer(token)`                           | `{ Authorization: "Bearer ..." }` for `.set(...)`                                   |
+| `createRole`, `createAdmin`, `createUser` | Rows straight in the database, without signing in                                   |
+| `googleIdTokenFor(email, overrides?)`     | A fake Google ID token for that email                                               |
+| `MISSING_ID`                              | A valid UUID that matches nothing                                                   |
 
 Wrote the code by hand and want Claude to write the tests? Ask "write tests for the `<feature>`
 module" (or for one endpoint). The `write-tests` skill reads the routes, schema and service, shows

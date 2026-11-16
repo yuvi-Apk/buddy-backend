@@ -1,113 +1,83 @@
 import type { Logger } from "pino";
 import type { PageName } from "../../config/rbac.config.js";
+import type { GoogleTokenVerifier } from "../../core/security/GoogleIdTokenVerifier.js";
 import type { PermissionService } from "../../core/permissions/PermissionService.js";
-import type { PasswordHasher } from "../../core/security/PasswordHasher.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import { ApiError } from "../../utils/ApiError.js";
-import type { ClientInfo, SessionService } from "../session/index.js";
+import type {
+  ClientInfo,
+  IssuedSession,
+  SessionService,
+} from "../session/index.js";
 import type { AdminAuthRepository } from "./admin-auth.repository.js";
 import type {
-  AdminLoginBody,
-  AdminLoginResult,
+  AdminSignInResult,
   AuthenticatedAdmin,
 } from "./admin-auth.schema.js";
 
-// After this many wrong passwords in a row the account is locked for a while (core-rules #13).
-const MAX_FAILED_LOGINS = 5;
-const LOCK_MINUTES = 15;
-
 export class AdminAuthService {
-  // Hashed once, then reused to spend the same time on unknown emails as on known ones.
-  private decoyHash?: Promise<string>;
-
   constructor(
     private readonly admins: AdminAuthRepository,
     private readonly sessions: SessionService,
     private readonly tokens: TokenService,
-    private readonly passwords: PasswordHasher,
+    private readonly google: GoogleTokenVerifier,
     private readonly permissions: PermissionService,
     private readonly logger: Logger
   ) {}
 
-  async login(
-    { email, password }: AdminLoginBody,
+  // Only admins that already exist can sign in. A new sign-in ends the session on every
+  // other device: one device at a time.
+  async signInWithGoogle(
+    idToken: string,
     client: ClientInfo
-  ): Promise<AdminLoginResult> {
-    // core-rules #14: one message for every failure, so nothing reveals whether the
-    // email exists, the account is locked, or the account is disabled.
-    const invalid = ApiError.unauthorized("Invalid email or password");
+  ): Promise<AdminSignInResult> {
+    // core-rules #14: one message for unknown, disabled and mismatched accounts.
+    const failed = ApiError.unauthorized("Google sign-in failed");
+    const identity = await this.google.verify(idToken);
 
-    const account = await this.admins.findWithPasswordHashByEmail(email);
-    if (!account) {
-      await this.passwords.verify(password, await this.getDecoyHash());
-      throw invalid;
-    }
+    const account =
+      (await this.admins.findForSignInByGoogleAccountId(
+        identity.googleAccountId
+      )) ?? (await this.admins.findForSignInByEmail(identity.email));
+    if (!account?.isActive) throw failed;
 
-    const isLocked =
-      account.lockedUntil !== null && account.lockedUntil > new Date();
-    const passwordOk = await this.passwords.verify(
-      password,
-      account.passwordHash
-    );
-
-    if (isLocked) {
+    const isRecorded = await this.admins.recordSignIn({
+      adminId: account.id,
+      googleAccountId: identity.googleAccountId,
+      avatarUrl: identity.avatarUrl,
+    });
+    if (!isRecorded) {
+      // The email belongs to an admin linked to a different Google account.
       this.logger.warn(
-        { adminUserId: account.id, ip: client.ip },
-        "Login attempt on locked admin account"
+        { adminId: account.id, ip: client.ip },
+        "Admin sign-in with a different Google account"
       );
-      throw invalid;
-    }
-    if (!passwordOk) {
-      await this.admins.recordFailedLogin(
-        account.id,
-        MAX_FAILED_LOGINS,
-        new Date(Date.now() + LOCK_MINUTES * 60 * 1000)
-      );
-      throw invalid;
+      throw failed;
     }
 
     const admin = await this.admins.findActiveProfile(account.id);
-    if (!admin) throw invalid; // disabled account
+    if (!admin) throw failed;
 
-    await this.admins.clearFailedLogins(account.id);
-    const session = await this.sessions.create(
+    const session = await this.sessions.createSingleDevice(
       { type: "ADMIN", id: admin.id },
       client
     );
-
-    return {
-      accessToken: this.tokens.signAdminAccessToken({
-        adminUserId: admin.id,
-        sessionId: session.sessionId,
-      }),
-      refreshToken: session.refreshToken,
-      refreshTokenExpiresAt: session.expiresAt,
-      admin,
-    };
+    return this.toResult(admin, session);
   }
 
   async refresh(
     refreshToken: string,
     client: ClientInfo
-  ): Promise<AdminLoginResult> {
+  ): Promise<AdminSignInResult> {
     const rotated = await this.sessions.rotate(refreshToken, "ADMIN", client);
 
-    const admin = await this.admins.findActiveProfile(rotated.subject.id);
+    const admin = await this.admins.findActiveProfile(rotated.owner.id);
     if (!admin) {
-      // The account was disabled after login: end the session.
+      // Disabled after sign-in: end the session.
       await this.sessions.revoke(rotated.sessionId);
       throw ApiError.unauthorized("Invalid refresh token");
     }
-
-    return {
-      accessToken: this.tokens.signAdminAccessToken({
-        adminUserId: admin.id,
-        sessionId: rotated.sessionId,
-      }),
-      refreshToken: rotated.refreshToken,
-      refreshTokenExpiresAt: rotated.expiresAt,
-      admin,
-    };
+    return this.toResult(admin, rotated);
   }
 
   logout(sessionId: string): Promise<void> {
@@ -115,19 +85,27 @@ export class AdminAuthService {
   }
 
   // Used by verifyAdmin on every request. Null when the account is missing or disabled.
-  getAuthenticatedAdmin(
-    adminUserId: string
-  ): Promise<AuthenticatedAdmin | null> {
-    return this.admins.findActiveProfile(adminUserId);
+  findAuthenticatedAdmin(adminId: string): Promise<AuthenticatedAdmin | null> {
+    return this.admins.findActiveProfile(adminId);
   }
 
   // The admin panel uses this to decide which menu items to show.
-  allowedPages(admin: AuthenticatedAdmin): Promise<PageName[]> {
+  listAllowedPages(admin: AuthenticatedAdmin): Promise<PageName[]> {
     return this.permissions.allowedPages(admin.role);
   }
 
-  private getDecoyHash(): Promise<string> {
-    this.decoyHash ??= this.passwords.hash("decoy-password-for-timing");
-    return this.decoyHash;
+  private toResult(
+    admin: AuthenticatedAdmin,
+    session: IssuedSession
+  ): AdminSignInResult {
+    return {
+      accessToken: this.tokens.signAdminAccessToken({
+        adminId: admin.id,
+        sessionId: session.sessionId,
+      }),
+      refreshToken: session.refreshToken,
+      refreshTokenExpiresAt: session.expiresAt,
+      admin,
+    };
   }
 }

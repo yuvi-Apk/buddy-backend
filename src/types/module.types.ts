@@ -16,7 +16,7 @@ export interface Infra {
 
 // The auth guards, built in container.ts once the auth modules exist.
 export interface Guards {
-  // Requires a logged-in admin. Sets req.adminUser and req.auth.
+  // Requires a logged-in admin. Sets req.admin and req.auth.
   verifyAdmin: RequestHandler;
   // Requires a logged-in app user. Sets req.user and req.auth.
   verifyUser: RequestHandler;

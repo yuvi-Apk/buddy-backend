@@ -38,15 +38,15 @@ describe("guards on /admin/roles", () => {
   it("lets SUPER_ADMIN in without any permission rows", async () => {
     const { auth, role } = await superAdmin();
     expect(
-      await prisma.rolePermission.count({ where: { roleId: role.id } })
+      await prisma.adminPermission.count({ where: { roleId: role.id } })
     ).toBe(0);
     expect((await request(app).get(ROLES).set(auth)).status).toBe(200);
   });
 
-  it("ignores a permission row with isAccess = false", async () => {
+  it("ignores a permission row with canAccess = false", async () => {
     const { auth, role } = await adminWith([]);
-    await prisma.rolePermission.create({
-      data: { roleId: role.id, page: "ROLE", isAccess: false },
+    await prisma.adminPermission.create({
+      data: { roleId: role.id, pageName: "ROLE", canAccess: false },
     });
     expect((await request(app).get(ROLES).set(auth)).status).toBe(403);
   });
@@ -255,7 +255,7 @@ describe("DELETE /admin/roles/:id", () => {
     const res = await request(app).delete(`${ROLES}/${unused.id}`).set(auth);
     expect(res.status).toBe(200);
     expect(
-      await prisma.role.findUnique({ where: { id: unused.id } })
+      await prisma.adminRole.findUnique({ where: { id: unused.id } })
     ).toBeNull();
   });
 });

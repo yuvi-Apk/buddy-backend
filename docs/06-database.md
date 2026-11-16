@@ -21,9 +21,9 @@ findById(id: string) {
 }
 ```
 
-Without `select`, Prisma returns every column, and a column added later (a password hash, an
+Without `select`, Prisma returns every column, and a column added later (a token hash, an
 internal note) would reach the API without anyone noticing. A method that must return a secret
-says so in its name, such as `findWithPasswordHash`, and its result never goes into a response.
+says so in its name, such as `findPreviousRefreshTokenHash`, and its result never goes into a response.
 
 ## Lists are paginated
 
@@ -98,13 +98,13 @@ pnpm exec prisma migrate dev --name add_school   # 2. creates and applies a migr
 - Never run `prisma db push` or `prisma migrate reset`. They skip or erase migration history.
 - Add each new table to the `TRUNCATE` list in `tests/helpers/testApp.ts`, or tests will leak
   data into each other.
-- Tables that belong to a school get a required `schoolId` with an index, and their repository
-  methods take `schoolId` as a required argument.
+- Tables that belong to an organization get a required `organizationId` with an index, and their
+  repository methods take `organizationId` as a required argument.
 
 ## Seed
 
 `pnpm db:seed` runs `prisma/seed.ts`. It creates the `SUPER_ADMIN` role and the first admin from
-`SEED_SUPER_ADMIN_EMAIL` and `SEED_SUPER_ADMIN_PASSWORD`. It is safe to run more than once; keep any
+`SEED_SUPER_ADMIN_EMAIL`, who then signs in with that Google account. It is safe to run more than once; keep any
 seed you add that way.
 
 ## Looking at the data

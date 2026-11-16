@@ -34,35 +34,32 @@ export const envSchema = z.object({
   // Admin and user tokens use different secrets so one can never pass as the other.
   ADMIN_ACCESS_TOKEN_SECRET: secret,
   USER_ACCESS_TOKEN_SECRET: secret,
-  OTP_HMAC_SECRET: secret,
 
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
 
-  // How login codes reach the phone. "log" prints the code to the server log (development only).
-  OTP_SENDER: z.enum(["log"]).default("log"),
+  // Comma-separated OAuth client IDs (web, Android, iOS) whose Google ID tokens are accepted.
+  GOOGLE_CLIENT_IDS: z
+    .string()
+    .min(1)
+    .transform((value) =>
+      value
+        .split(",")
+        .map((clientId) => clientId.trim())
+        .filter(Boolean)
+    )
+    .pipe(z.tuple([z.string()], z.string())),
 
   STORAGE_DRIVER: z.enum(["local"]).default("local"),
 
-  // Used only by `pnpm db:seed` to create the first super admin.
+  // Used only by `pnpm db:seed`: the first super admin, who then signs in with this Google account.
   SEED_SUPER_ADMIN_EMAIL: z.email().optional(),
-  SEED_SUPER_ADMIN_PASSWORD: z.string().min(12).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
-// Rules that involve more than one variable.
-const checkedEnvSchema = envSchema.refine(
-  (value) => !(value.NODE_ENV === "production" && value.OTP_SENDER === "log"),
-  {
-    path: ["OTP_SENDER"],
-    message:
-      '"log" writes login codes to the server log and is not allowed in production. Add an SMS provider.',
-  }
-);
-
 export function loadEnv(source: Record<string, string | undefined>): Env {
-  const result = checkedEnvSchema.safeParse(source);
+  const result = envSchema.safeParse(source);
   if (!result.success) {
     // Names and reasons only. Values are never printed.
     const problems = result.error.issues

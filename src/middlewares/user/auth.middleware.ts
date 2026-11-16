@@ -1,4 +1,4 @@
-// Guard for app (student) routes.
+// Guard for app (user panel) routes.
 //
 //   router.get("/me", verifyUser, controller.me);
 //
@@ -29,17 +29,17 @@ export function createVerifyUser({
     if (!token) throw ApiError.unauthorized();
 
     const { userId, sessionId } = tokenService.verifyUserAccessToken(token);
-    const subject = { type: "USER", id: userId } as const;
+    const owner = { type: "USER", id: userId } as const;
 
-    if (!(await sessionService.isActive(sessionId, subject))) {
+    if (!(await sessionService.isActive(sessionId, owner))) {
       throw ApiError.unauthorized();
     }
 
-    const user = await userAuthService.getAuthenticatedUser(userId);
+    const user = await userAuthService.findAuthenticatedUser(userId);
     if (!user) throw ApiError.unauthorized();
 
     req.user = user;
-    req.auth = { subject, sessionId };
+    req.auth = { owner, sessionId };
     next();
   });
 

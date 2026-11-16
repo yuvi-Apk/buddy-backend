@@ -2,7 +2,7 @@
 import request from "supertest";
 import { expect } from "vitest";
 import type { PageName } from "../../src/config/rbac.config.js";
-import { adminWith, loginUser } from "./auth.js";
+import { adminWith, signInUser } from "./auth.js";
 import { app } from "./testApp.js";
 
 export type Method = "get" | "post" | "patch" | "put" | "delete";
@@ -13,7 +13,7 @@ export const MISSING_ID = "00000000-0000-4000-8000-000000000000";
 
 // Every route answers 401 without a token, and 401 for a user (app) token.
 export async function expectLoginRequired(routes: Route[]) {
-  const user = await loginUser("+919800000099");
+  const user = await signInUser("guard-check@buddy.test");
   for (const [method, path] of routes) {
     const anonymous = await request(app)[method](path);
     expect(anonymous.status, `${method} ${path} without a token`).toBe(401);

@@ -85,7 +85,7 @@ describe("POST /admin/uploads/images", () => {
     expect(noAccess.status).toBe(403);
 
     expect(await tempFiles()).toEqual(before);
-    expect(await prisma.uploadedFile.count()).toBe(0);
+    expect(await prisma.upload.count()).toBe(0);
   });
 
   it("400 without a file", async () => {
@@ -123,7 +123,7 @@ describe("POST /admin/uploads/images", () => {
     expect(res.body.message).toBe(
       "File is not a valid JPEG, PNG or WebP image"
     );
-    expect(await prisma.uploadedFile.count()).toBe(0);
+    expect(await prisma.upload.count()).toBe(0);
   });
 
   it("400 for a file type that is not on the allowlist", async () => {
@@ -167,7 +167,7 @@ describe("POST /admin/uploads/images", () => {
 
     const stored = await sharp(diskPath(url)).metadata();
     expect(stored.format).toBe("webp");
-    expect(await prisma.uploadedFile.count()).toBe(1);
+    expect(await prisma.upload.count()).toBe(1);
   });
 
   it("201 and the stored image is served over HTTP", async () => {
@@ -242,7 +242,7 @@ describe("DELETE /admin/uploads/:id", () => {
     const res = await request(app).delete(`${UPLOADS}/${id}`).set(auth);
     expect(res.status).toBe(200);
     expect(existsSync(diskPath(url))).toBe(false);
-    expect(await prisma.uploadedFile.count()).toBe(0);
+    expect(await prisma.upload.count()).toBe(0);
 
     const again = await request(app).delete(`${UPLOADS}/${id}`).set(auth);
     expect(again.status).toBe(404);

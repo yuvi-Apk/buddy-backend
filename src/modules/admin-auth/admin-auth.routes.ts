@@ -3,7 +3,10 @@ import { publicRoute } from "../../middlewares/routeGuard.js";
 import { validate } from "../../middlewares/validate.middleware.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import type { AdminAuthController } from "./admin-auth.controller.js";
-import { adminLoginBody, adminRefreshBody } from "./admin-auth.schema.js";
+import {
+  adminGoogleSignInBody,
+  adminRefreshBody,
+} from "./admin-auth.schema.js";
 
 interface Deps {
   verifyAdmin: RequestHandler;
@@ -18,11 +21,11 @@ export function createAdminAuthRouter(
   const router = Router();
 
   router.post(
-    "/login",
+    "/google",
     publicRoute(),
     authRateLimit,
-    validate({ body: adminLoginBody }),
-    asyncHandler(controller.login)
+    validate({ body: adminGoogleSignInBody }),
+    asyncHandler(controller.signInWithGoogle)
   );
 
   router.post(

@@ -9,7 +9,7 @@ const roleSelect = {
   description: true,
   createdAt: true,
   updatedAt: true,
-  permissions: { where: { isAccess: true }, select: { page: true } },
+  permissions: { where: { canAccess: true }, select: { pageName: true } },
 } as const;
 
 interface RoleRow {
@@ -18,12 +18,12 @@ interface RoleRow {
   description: string | null;
   createdAt: Date;
   updatedAt: Date;
-  permissions: { page: string }[];
+  permissions: { pageName: string }[];
 }
 
 const toDto = ({ permissions, ...role }: RoleRow): RoleDto => ({
   ...role,
-  pages: permissions.map((permission) => permission.page).sort(),
+  pages: permissions.map((permission) => permission.pageName).sort(),
 });
 
 export class RoleRepository implements RolePagesLoader {
@@ -37,19 +37,19 @@ export class RoleRepository implements RolePagesLoader {
       : {};
 
     const [rows, total] = await Promise.all([
-      this.prisma.role.findMany({
+      this.prisma.adminRole.findMany({
         where,
         select: roleSelect,
         orderBy: { name: "asc" },
         ...toSkipTake(query),
       }),
-      this.prisma.role.count({ where }),
+      this.prisma.adminRole.count({ where }),
     ]);
     return { items: rows.map(toDto), total };
   }
 
   async findById(id: string): Promise<RoleDto | null> {
-    const row = await this.prisma.role.findUnique({
+    const row = await this.prisma.adminRole.findUnique({
       where: { id },
       select: roleSelect,
     });
@@ -61,12 +61,15 @@ export class RoleRepository implements RolePagesLoader {
     description?: string;
     pages: string[];
   }): Promise<RoleDto> {
-    const row = await this.prisma.role.create({
+    const row = await this.prisma.adminRole.create({
       data: {
         name: input.name,
         description: input.description,
         permissions: {
-          create: input.pages.map((page) => ({ page, isAccess: true })),
+          create: input.pages.map((pageName) => ({
+            pageName,
+            canAccess: true,
+          })),
         },
       },
       select: roleSelect,
@@ -83,12 +86,16 @@ export class RoleRepository implements RolePagesLoader {
 
     const row = await this.prisma.$transaction(async (tx) => {
       if (pages) {
-        await tx.rolePermission.deleteMany({ where: { roleId: id } });
-        await tx.rolePermission.createMany({
-          data: pages.map((page) => ({ roleId: id, page, isAccess: true })),
+        await tx.adminPermission.deleteMany({ where: { roleId: id } });
+        await tx.adminPermission.createMany({
+          data: pages.map((pageName) => ({
+            roleId: id,
+            pageName,
+            canAccess: true,
+          })),
         });
       }
-      return tx.role.update({
+      return tx.adminRole.update({
         where: { id },
         data: fields,
         select: roleSelect,
@@ -98,19 +105,19 @@ export class RoleRepository implements RolePagesLoader {
   }
 
   async delete(id: string): Promise<void> {
-    await this.prisma.role.delete({ where: { id }, select: { id: true } });
+    await this.prisma.adminRole.delete({ where: { id }, select: { id: true } });
   }
 
   countAdminsWithRole(roleId: string): Promise<number> {
-    return this.prisma.adminUser.count({ where: { roleId } });
+    return this.prisma.admin.count({ where: { roleId } });
   }
 
   // Used by PermissionService to fill its cache.
   async findAllowedPages(roleId: string): Promise<string[]> {
-    const rows = await this.prisma.rolePermission.findMany({
-      where: { roleId, isAccess: true },
-      select: { page: true },
+    const rows = await this.prisma.adminPermission.findMany({
+      where: { roleId, canAccess: true },
+      select: { pageName: true },
     });
-    return rows.map((row) => row.page);
+    return rows.map((row) => row.pageName);
   }
 }

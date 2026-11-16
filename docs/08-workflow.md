@@ -52,14 +52,14 @@ the class in `src/container.ts`. No module changes.
 - Success: `res.status(200).json(new ApiResponse(200, data, "Schools fetched"))`.
 - Anything else that is thrown becomes a 500 "Internal Server Error". The real error is logged with
   the request ID, never sent to the client.
-- Never log passwords, codes or tokens. The logger hides fields named `password`, `otp`, `token`,
-  `accessToken`, `refreshToken`, and the `Authorization` and `Cookie` headers, but don't rely on
-  that for new names.
+- Never log passwords or tokens. The logger hides fields named `password`, `token`,
+  `accessToken`, `refreshToken`, `idToken`, and the `Authorization` and `Cookie` headers, but don't
+  rely on that for new names.
 
 ## Adding a package
 
 Add one only if nothing in Node or the current dependencies can do the job, and write the reason in
-the commit message. Node already gives you `crypto.randomUUID`, `crypto.scrypt`, `fetch`, `--env-file`
+the commit message. Node already gives you `crypto.randomUUID`, `crypto.createPublicKey`, `fetch`, `--env-file`
 and `fs/promises`.
 
 ## Before you hand over a change

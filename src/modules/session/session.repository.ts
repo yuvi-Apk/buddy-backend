@@ -1,63 +1,91 @@
 import type { PrismaClient } from "../../config/prisma.js";
-import type { ClientInfo, Subject, SubjectType } from "./session.schema.js";
+import type {
+  ClientInfo,
+  SessionDto,
+  SessionOwner,
+  SessionOwnerType,
+} from "./session.schema.js";
 
 // Never includes the token hashes: this is what the outside world may see.
-const publicSelect = {
+const sessionSelect = {
   id: true,
   createdAt: true,
   lastUsedAt: true,
   expiresAt: true,
-  userAgent: true,
-  ip: true,
+  deviceUserAgent: true,
+  deviceIp: true,
 } as const;
 
-const subjectColumn = (subject: Subject) =>
-  subject.type === "ADMIN"
-    ? { adminUserId: subject.id }
-    : { userId: subject.id };
+const ownerColumns = (owner: SessionOwner) =>
+  owner.type === "ADMIN"
+    ? { ownerType: owner.type, adminId: owner.id }
+    : { ownerType: owner.type, userId: owner.id };
+
+interface NewSession {
+  id: string;
+  owner: SessionOwner;
+  refreshTokenHash: string;
+  expiresAt: Date;
+  client: ClientInfo;
+}
+
+const toCreateData = (session: NewSession) => ({
+  id: session.id,
+  ...ownerColumns(session.owner),
+  refreshTokenHash: session.refreshTokenHash,
+  expiresAt: session.expiresAt,
+  deviceUserAgent: session.client.userAgent,
+  deviceIp: session.client.ip,
+});
 
 export class SessionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(input: {
-    id: string;
-    subject: Subject;
-    refreshTokenHash: string;
-    expiresAt: Date;
-    client: ClientInfo;
-  }): Promise<void> {
+  async create(session: NewSession): Promise<void> {
     await this.prisma.session.create({
-      data: {
-        id: input.id,
-        subjectType: input.subject.type,
-        ...subjectColumn(input.subject),
-        refreshTokenHash: input.refreshTokenHash,
-        expiresAt: input.expiresAt,
-        userAgent: input.client.userAgent,
-        ip: input.client.ip,
-      },
+      data: toCreateData(session),
       select: { id: true },
     });
   }
 
+  // Single-device sign-in: revokes the owner's other sessions and creates the new one in one
+  // transaction. The advisory lock makes two parallel sign-ins of the same owner run one
+  // after the other, so both can never survive. Returns the revoked session IDs.
+  async replaceAllForOwner(session: NewSession): Promise<string[]> {
+    const lockKey = `session-owner:${session.owner.type}:${session.owner.id}`;
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+
+      const where = { ...ownerColumns(session.owner), revokedAt: null };
+      const revoked = await tx.session.findMany({
+        where,
+        select: { id: true },
+      });
+      await tx.session.updateMany({ where, data: { revokedAt: new Date() } });
+      await tx.session.create({
+        data: toCreateData(session),
+        select: { id: true },
+      });
+      return revoked.map((row) => row.id);
+    });
+  }
+
   // The session's owner, or null when it does not exist, is revoked or has expired.
-  async findActiveSubject(id: string): Promise<Subject | null> {
+  async findActiveOwner(id: string): Promise<SessionOwner | null> {
     const session = await this.prisma.session.findFirst({
       where: { id, revokedAt: null, expiresAt: { gt: new Date() } },
-      select: { subjectType: true, adminUserId: true, userId: true },
+      select: { ownerType: true, adminId: true, userId: true },
     });
-    const subjectId = session?.adminUserId ?? session?.userId;
-    return session && subjectId
-      ? { type: session.subjectType, id: subjectId }
-      : null;
+    const ownerId = session?.adminId ?? session?.userId;
+    return session && ownerId ? { type: session.ownerType, id: ownerId } : null;
   }
 
   // Swaps the refresh token in ONE statement. The WHERE clause is the check, so when two
   // requests present the same token only one of them can succeed (core-rules #3).
-  // Returns true when the swap happened.
   async rotateRefreshToken(input: {
     id: string;
-    subjectType: SubjectType;
+    ownerType: SessionOwnerType;
     currentHash: string;
     newHash: string;
     newExpiresAt: Date;
@@ -66,7 +94,7 @@ export class SessionRepository {
     const { count } = await this.prisma.session.updateMany({
       where: {
         id: input.id,
-        subjectType: input.subjectType,
+        ownerType: input.ownerType,
         refreshTokenHash: input.currentHash,
         revokedAt: null,
         expiresAt: { gt: now },
@@ -81,8 +109,8 @@ export class SessionRepository {
     return count === 1;
   }
 
-  // Used only to detect a refresh token that was already used. Returns hashes on purpose.
-  async findPreviousTokenHash(id: string): Promise<string | null> {
+  // Only to detect a refresh token that was already used. Returns a hash on purpose.
+  async findPreviousRefreshTokenHash(id: string): Promise<string | null> {
     const session = await this.prisma.session.findFirst({
       where: { id, revokedAt: null },
       select: { previousRefreshTokenHash: true },
@@ -97,33 +125,27 @@ export class SessionRepository {
     });
   }
 
-  // Revokes every active session of a subject and returns their IDs.
-  async revokeAllForSubject(subject: Subject): Promise<string[]> {
-    const where = {
-      ...subjectColumn(subject),
-      subjectType: subject.type,
-      revokedAt: null,
-    };
-    const sessions = await this.prisma.session.findMany({
-      where,
-      select: { id: true },
+  // Revokes every active session of the owner and returns their IDs.
+  async revokeAllForOwner(owner: SessionOwner): Promise<string[]> {
+    return this.prisma.$transaction(async (tx) => {
+      const where = { ...ownerColumns(owner), revokedAt: null };
+      const sessions = await tx.session.findMany({
+        where,
+        select: { id: true },
+      });
+      await tx.session.updateMany({ where, data: { revokedAt: new Date() } });
+      return sessions.map((session) => session.id);
     });
-    await this.prisma.session.updateMany({
-      where,
-      data: { revokedAt: new Date() },
-    });
-    return sessions.map((session) => session.id);
   }
 
-  listActiveForSubject(subject: Subject) {
+  listActiveForOwner(owner: SessionOwner): Promise<SessionDto[]> {
     return this.prisma.session.findMany({
       where: {
-        ...subjectColumn(subject),
-        subjectType: subject.type,
+        ...ownerColumns(owner),
         revokedAt: null,
         expiresAt: { gt: new Date() },
       },
-      select: publicSelect,
+      select: sessionSelect,
       orderBy: { lastUsedAt: "desc" },
     });
   }

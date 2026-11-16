@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
-import type { SessionIdParams, Subject } from "./session.schema.js";
+import type { SessionIdParams, SessionOwner } from "./session.schema.js";
 import type { SessionService } from "./session.service.js";
 
 export class SessionController {
@@ -9,8 +9,8 @@ export class SessionController {
 
   // Lists the caller's own active sessions (their logged-in devices).
   list = async (req: Request, res: Response) => {
-    const subject = this.currentSubject(req);
-    const sessions = await this.sessionService.listForSubject(subject);
+    const owner = this.currentOwner(req);
+    const sessions = await this.sessionService.listForOwner(owner);
 
     const data = sessions.map((session) => ({
       ...session,
@@ -21,15 +21,15 @@ export class SessionController {
 
   // Logs out one of the caller's own sessions.
   revoke = async (req: Request, res: Response) => {
-    const subject = this.currentSubject(req);
+    const owner = this.currentOwner(req);
     const { id } = req.validated.params as SessionIdParams;
 
-    await this.sessionService.revokeOwned(id, subject);
+    await this.sessionService.revokeOwned(id, owner);
     res.status(200).json(new ApiResponse(200, null, "Session revoked"));
   };
 
-  private currentSubject(req: Request): Subject {
+  private currentOwner(req: Request): SessionOwner {
     if (!req.auth) throw ApiError.unauthorized();
-    return req.auth.subject;
+    return req.auth.owner;
   }
 }

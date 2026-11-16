@@ -1,6 +1,5 @@
 // Public entry point of the user-auth module. Other code imports from here only.
-import type { OtpSender } from "../../core/otp/OtpSender.js";
-import type { OtpService } from "../../core/otp/OtpService.js";
+import type { GoogleTokenVerifier } from "../../core/security/GoogleIdTokenVerifier.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import type { Infra, RouterDeps } from "../../types/module.types.js";
 import type { SessionService } from "../session/index.js";
@@ -14,8 +13,7 @@ export function createUserAuthModule(
   deps: {
     sessionService: SessionService;
     tokenService: TokenService;
-    otpService: OtpService;
-    otpSender: OtpSender;
+    googleTokenVerifier: GoogleTokenVerifier;
   }
 ) {
   const repository = new UserAuthRepository(prisma);
@@ -23,8 +21,7 @@ export function createUserAuthModule(
     repository,
     deps.sessionService,
     deps.tokenService,
-    deps.otpService,
-    deps.otpSender
+    deps.googleTokenVerifier
   );
   const controller = new UserAuthController(service);
 

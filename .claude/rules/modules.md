@@ -56,7 +56,7 @@ export type { RoleDto } from "./role.schema.js"; // types other code needs
 | Admin panel, one of several pages                  | `verifyAdmin`, `requireAnyPermission([...])` |
 | Admin's own account (profile, own sessions)        | `verifyAdmin`, `ownAccountRoute()`           |
 | Mobile app                                         | `verifyUser`                                 |
-| Open on purpose (login, OTP)                       | `publicRoute()`, plus `authRateLimit`        |
+| Open on purpose (sign-in, refresh)                 | `publicRoute()`, plus `authRateLimit`        |
 
 Fixed paths (`/pages`) go above parameter paths (`/:id`). A new admin page goes into `PAGES` in
 `src/config/rbac.config.ts`.
@@ -64,7 +64,7 @@ Fixed paths (`/pages`) go above parameter paths (`/:id`). A new admin page goes 
 ## Controllers and responses
 
 - Methods are arrow properties (`list = async (req, res) => {}`) so `this` survives being passed to a router.
-- Input comes only from `req.validated`; the caller from `req.adminUser`, `req.user` or `req.auth`.
+- Input comes only from `req.validated`; the caller from `req.admin`, `req.user` or `req.auth`.
 - Success: `res.status(n).json(new ApiResponse(n, data, "message"))`, 201 for create, 200 otherwise.
 - Expected failure: `throw ApiError.notFound(...)` (or `badRequest`, `unauthorized`, `forbidden`,
   `conflict`, `tooManyRequests`). Never build error JSON by hand.

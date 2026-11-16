@@ -1,25 +1,40 @@
 import type { PrismaClient } from "../../config/prisma.js";
+import type { GoogleIdentity } from "../../core/security/GoogleIdTokenVerifier.js";
+import type { AuthenticatedUser } from "./user-auth.schema.js";
 
-const profileSelect = { id: true, phone: true, name: true } as const;
+const profileSelect = {
+  id: true,
+  email: true,
+  name: true,
+  avatarUrl: true,
+  examCategory: true,
+} as const;
 
 export class UserAuthRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  // Returns the user with this phone, creating the account on first login.
-  // upsert is one statement, so two parallel first logins cannot create two users.
-  findOrCreateByPhone(phone: string) {
+  // Finds the user by Google account, creating them on first sign-in. upsert is one
+  // statement, so two parallel first sign-ins can't create two users.
+  upsertFromGoogle(identity: GoogleIdentity) {
+    const now = new Date();
     return this.prisma.user.upsert({
-      where: { phone },
-      update: {},
-      create: { phone },
+      where: { googleAccountId: identity.googleAccountId },
+      update: { lastLoginAt: now },
+      create: {
+        googleAccountId: identity.googleAccountId,
+        email: identity.email,
+        name: identity.name,
+        avatarUrl: identity.avatarUrl,
+        lastLoginAt: now,
+      },
       select: { ...profileSelect, isActive: true },
     });
   }
 
   // The user's public profile, or null when the account is missing or disabled.
-  findActiveProfile(id: string) {
+  findActiveProfile(userId: string): Promise<AuthenticatedUser | null> {
     return this.prisma.user.findFirst({
-      where: { id, isActive: true },
+      where: { id: userId, isActive: true },
       select: profileSelect,
     });
   }

@@ -1,6 +1,6 @@
 # Buddy backend
 
-Backend for an AI education platform: a mobile app for students and an admin panel for staff.
+Backend for an AI education platform: a user panel (app) and a super admin panel, both with Google sign-in.
 Node 22, pnpm, TypeScript (ESM), Express 5, Prisma 7 + PostgreSQL, Redis, Zod, Vitest.
 
 Rules live in `.claude/rules/`. `core-rules.md` is always loaded; the others load when you work on

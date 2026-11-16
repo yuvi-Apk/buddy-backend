@@ -1,7 +1,7 @@
 // Extra fields this app adds to the Express request.
 import "express";
 import type { AuthenticatedAdmin } from "../modules/admin-auth/index.js";
-import type { Subject } from "../modules/session/index.js";
+import type { SessionOwner } from "../modules/session/index.js";
 import type { AuthenticatedUser } from "../modules/user-auth/index.js";
 
 declare global {
@@ -17,14 +17,14 @@ declare global {
 
       // Set by verifyAdmin and verifyUser: who is calling and through which session.
       auth?: {
-        subject: Subject;
+        owner: SessionOwner;
         sessionId: string;
       };
 
-      // Set by verifyAdmin: the logged-in admin and their role.
-      adminUser?: AuthenticatedAdmin;
+      // Set by verifyAdmin: the signed-in admin and their role.
+      admin?: AuthenticatedAdmin;
 
-      // Set by verifyUser: the logged-in app user.
+      // Set by verifyUser: the signed-in app user.
       user?: AuthenticatedUser;
     }
   }

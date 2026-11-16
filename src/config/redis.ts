@@ -1,4 +1,4 @@
-// The Redis client: sessions, OTPs, rate limits and the role-permission cache.
+// The Redis client: sessions, rate limits, Google keys and the role-permission cache.
 import { Redis } from "ioredis";
 import { env } from "./env.js";
 import { logger } from "./logger.js";

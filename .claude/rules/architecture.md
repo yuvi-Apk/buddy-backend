@@ -12,7 +12,7 @@ request
   → src/app.ts            request log + ID, helmet, CORS allowlist, 100 kb body limit, cookies
   → src/routes.ts         /api/v1, health check, global rate limit, one mount per module
   → <feature>.routes.ts   guard(s) → validate({ body, query, params }) → asyncHandler(controller.x)
-  → <feature>.controller  reads req.validated + req.adminUser / req.user, calls the service
+  → <feature>.controller  reads req.validated + req.admin / req.user, calls the service
   → <feature>.service     rules, ownership checks, transactions, cache invalidation
   → <feature>.repository  the only layer that talks to Prisma
   → errorHandler          turns any thrown error into a safe JSON response
@@ -33,8 +33,7 @@ src/
                        clientInfo, deleteLocalFile, uploadAndCompressImage
   middlewares/         admin/ and user/ auth guards, routeGuard, validate, rate limit, upload, notFound
   core/                shared infrastructure classes (no business rules)
-    security/          PasswordHasher, TokenService
-    otp/               OtpService, OtpSender (interface + LogOtpSender)
+    security/          GoogleIdTokenVerifier (Google sign-in), TokenService
     permissions/       PermissionService (role pages cached in Redis)
     storage/           StorageProvider (interface + LocalStorageProvider)
     health/            health routes
@@ -56,7 +55,7 @@ Reserved (create with the `new-module` skill when needed):
 
 | Module             | Purpose                                                         |
 | ------------------ | --------------------------------------------------------------- |
-| `school`           | Schools (the tenant). School-owned tables carry `schoolId`      |
+| `organization`     | Schools, colleges, coaching centres (the tenant); memberships   |
 | `classroom`        | Classes and sections inside a school                            |
 | `student`          | Student profile, enrolment in a section                         |
 | `book`             | Book upload; chunking and embedding run in a job                |

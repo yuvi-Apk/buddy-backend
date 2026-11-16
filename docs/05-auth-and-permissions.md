@@ -2,10 +2,10 @@
 
 There are two kinds of caller, and their tokens can never be swapped:
 
-| Caller               | Logs in with          | Guard         | Sets on `req`               |
-| -------------------- | --------------------- | ------------- | --------------------------- |
-| Staff (admin panel)  | Email + password      | `verifyAdmin` | `req.adminUser`, `req.auth` |
-| Student (mobile app) | Phone + one-time code | `verifyUser`  | `req.user`, `req.auth`      |
+| Caller                             | Signs in with | Devices       | Guard         | Sets on `req`           |
+| ---------------------------------- | ------------- | ------------- | ------------- | ----------------------- |
+| Staff (super admin panel)          | Google        | one at a time | `verifyAdmin` | `req.admin`, `req.auth` |
+| App user (individual, student ...) | Google        | many          | `verifyUser`  | `req.user`, `req.auth`  |
 
 Admin and user tokens are signed with different secrets and audiences, so a user token on an admin
 route always gets 401, and the other way round.
@@ -20,7 +20,7 @@ Every route must have one of these. `tests/guardrails/route-guards.test.ts` fail
 | Something any of several admin pages may use      | `verifyAdmin`, `requireAnyPermission([...])` |
 | The admin's own account (profile, own sessions)   | `verifyAdmin`, `ownAccountRoute()`           |
 | The mobile app                                    | `verifyUser`                                 |
-| Open on purpose (login, request a code)           | `publicRoute()`, plus `authRateLimit`        |
+| Open on purpose (sign-in, refresh)                | `publicRoute()`, plus `authRateLimit`        |
 
 `ownAccountRoute()` and `publicRoute()` don't check anything themselves. They are labels that say
 "this is deliberate", so the guard test can tell a forgotten guard from an intentional one.
@@ -35,8 +35,8 @@ export const SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 ```
 
 - A **page** is one area of the admin panel.
-- A **role** (stored in the `Role` table) is granted pages one by one (`RolePermission` rows with
-  `isAccess = true`). Super admins manage roles through `/admin/roles`.
+- A **role** (table `admin_roles`) is granted pages one by one (`admin_permissions` rows with
+  `canAccess = true`). Super admins manage roles through `/admin/roles`.
 - Admins with the `SUPER_ADMIN` role pass every permission check. That role can't be edited or
   deleted, and no admin can edit their own role.
 - `GET /admin/auth/me` returns the admin's `pages`, so the admin panel can hide what they can't open.
@@ -48,7 +48,7 @@ the admin's very next request.
 
 ## Sessions and tokens
 
-Each login creates a row in the `Session` table and returns two tokens:
+Each sign-in creates a row in the `sessions` table and returns two tokens:
 
 | Token         | Lifetime                        | Where it travels                                                                     |
 | ------------- | ------------------------------- | ------------------------------------------------------------------------------------ |
@@ -65,40 +65,47 @@ Each login creates a row in the `Session` table and returns two tokens:
   session revoked, so the same access token gets 401 on the next request, even though it hasn't
   expired.
 - Admins and users can list their sessions and revoke one (`/admin/sessions`, `/user/sessions`).
-  Revoking someone else's session answers 404.
+  Revoking someone else's session answers 404. Each session shows `deviceUserAgent` and `deviceIp`
+  so people can tell their devices apart.
 
-## Admin login protection
+## Google sign-in
 
-- The same message, "Invalid email or password", for a wrong password, an unknown email and a
-  disabled account, and the same response time (a decoy hash is checked for unknown emails).
-- After 5 wrong passwords the account is locked for 15 minutes.
-- Login and refresh are limited to 20 requests per 15 minutes per IP.
+Both panels sign in with Google only. The client gets an **ID token** from "Sign in with Google"
+and sends it to the API:
 
-## User login with a one-time code (OTP)
+| Panel | Route                                 | Account                                          |
+| ----- | ------------------------------------- | ------------------------------------------------ |
+| Admin | `POST /admin/auth/google { idToken }` | Must already exist (seed or another admin)       |
+| App   | `POST /user/auth/google { idToken }`  | Created on first sign-in from the Google profile |
 
-1. `POST /user/auth/otp/request { phone }` creates a 6-digit code and sends it through the
-   `OtpSender`. The answer is the same whether the number is known or not.
-2. `POST /user/auth/otp/verify { phone, otp }` checks it. The account is created on the first
-   successful login.
+`GoogleIdTokenVerifier` (`src/core/security/`) checks the token's RS256 signature against Google's
+public keys, the issuer, the audience (one of `GOOGLE_CLIENT_IDS`), the expiry, and that the email
+is verified. Google's keys are cached in Redis (`google:jwks`) for as long as Google says; an
+unknown key id refetches at most once a minute.
 
-Limits: the code lives 5 minutes and works once; 5 wrong guesses destroy it; one code per minute and
-5 per hour per phone. Only an HMAC of the code is stored, in Redis.
+- **Admins:** the first sign-in links the Google account (`googleAccountId`) to the admin with that
+  email. After that the admin is found by Google account, even if the Google email changes. An
+  email already linked to another Google account is refused.
+- **One device at a time (admins):** a sign-in revokes every other session of that admin in the
+  same transaction, under a Postgres advisory lock, so parallel sign-ins can't leave two alive.
+- **Many devices (users):** each sign-in adds a session. `POST /user/auth/logout` ends this device;
+  `POST /user/auth/logout-all` ends every device of the user.
+- Every failure (bad token, unknown or disabled account, another Google account) answers 401
+  "Google sign-in failed" (core-rules #14).
+- Sign-in and refresh are limited to 20 requests per 15 minutes per IP.
 
-Phone numbers must be in international format: `+` and 8–15 digits, for example `+919812345678`.
-
-`OTP_SENDER=log` prints the code in the server log, for development. The app refuses to start with
-it in production. A real SMS provider is added as a new class implementing `OtpSender`
-(`src/core/otp/OtpSender.ts`) and chosen in `src/container.ts`.
+`GOOGLE_CLIENT_IDS` lists the OAuth client IDs whose tokens are accepted: the admin panel's web
+client and the app's Android and iOS clients, comma-separated.
 
 ## Using the caller in your code
 
 ```ts
 // controller, on an admin route
-const admin = req.adminUser!; // { id, name, email, role: { id, name } }
+const admin = req.admin!; // { id, name, email, avatarUrl, role: { id, name } }
 
 // controller, on an app route
-const user = req.user!; // { id, phone, name }
+const user = req.user!; // { id, email, name, avatarUrl, examCategory }
 ```
 
 Pass the caller to the service and check ownership there, for example "this student belongs to
-the admin's school". Never trust an ID from the body to say who the caller is.
+the caller's organization". Never trust an ID from the body to say who the caller is.

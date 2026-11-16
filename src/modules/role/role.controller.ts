@@ -50,7 +50,7 @@ export class RoleController {
   };
 
   private actor(req: Request): AuthenticatedAdmin {
-    if (!req.adminUser) throw ApiError.unauthorized();
-    return req.adminUser;
+    if (!req.admin) throw ApiError.unauthorized();
+    return req.admin;
   }
 }

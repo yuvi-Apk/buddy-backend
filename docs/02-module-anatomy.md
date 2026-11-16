@@ -51,7 +51,7 @@ export interface RoleDto {
 ## repository.ts: talk to the database
 
 A class that receives the Prisma client in its constructor. It is the only kind of file allowed to
-use Prisma. Every query names its fields with `select`, so a new column (or a password hash) never
+use Prisma. Every query names its fields with `select`, so a new column (or a token hash) never
 leaks into a response by accident.
 
 ```ts
@@ -130,7 +130,7 @@ export class RoleController {
 ```
 
 - Input only from `req.validated` (never `req.body`, `req.query`, `req.params`).
-- The caller from `req.adminUser` (admin routes) or `req.user` (app routes).
+- The caller from `req.admin` (admin routes) or `req.user` (app routes).
 - 201 for create, 200 for everything else.
 
 ## routes.ts: paths and guards

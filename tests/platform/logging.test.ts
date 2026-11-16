@@ -26,24 +26,24 @@ describe("log redaction", () => {
     logger.info(
       {
         password: "hunter2-password",
-        otp: "123456",
+        idToken: "google-id-token-123",
         token: "tok-abc",
         user: { password: "nested-password", refreshToken: "ref-xyz" },
-        body: { accessToken: "acc-123", otp: "654321" },
+        body: { accessToken: "acc-123", idToken: "google-id-token-456" },
         email: "visible@buddy.test",
       },
-      "login attempt"
+      "sign-in attempt"
     );
 
     const logged = read();
     for (const secret of [
       "hunter2-password",
-      "123456",
+      "google-id-token-123",
       "tok-abc",
       "nested-password",
       "ref-xyz",
       "acc-123",
-      "654321",
+      "google-id-token-456",
     ]) {
       expect(logged, secret).not.toContain(secret);
     }

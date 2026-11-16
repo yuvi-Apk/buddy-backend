@@ -14,7 +14,7 @@ Tests run against real Postgres (`buddy_test`) and Redis (db 1) from `.env.test`
 ```
 tests/
   helpers/     testApp.ts (app, container, resetState), fixtures.ts (createRole, createAdmin, ...),
-               auth.ts (adminWith, superAdmin, loginAdmin, loginUser, bearer),
+               auth.ts (adminWith, superAdmin, signInAdmin, signInUser, bearer),
                guards.ts (expectLoginRequired, expectAdminPageRequired, MISSING_ID)
   guardrails/  ESLint rules, env files, every route has a guard
   platform/    app shell, data stores, HTTP building blocks, logging, cross-module guards

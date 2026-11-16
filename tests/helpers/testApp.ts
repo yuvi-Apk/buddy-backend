@@ -1,35 +1,48 @@
 // Shared setup for integration tests: the real app, wired to the test Postgres and Redis.
+import { randomUUID } from "node:crypto";
 import { createApp } from "../../src/app.js";
 import { prisma } from "../../src/config/prisma.js";
 import { redis } from "../../src/config/redis.js";
 import { createContainer } from "../../src/container.js";
-import type { OtpSender } from "../../src/core/otp/OtpSender.js";
-import { PasswordHasher } from "../../src/core/security/PasswordHasher.js";
+import type {
+  GoogleIdentity,
+  GoogleTokenVerifier,
+} from "../../src/core/security/GoogleIdTokenVerifier.js";
+import { ApiError } from "../../src/utils/ApiError.js";
 
-// Stands in for the SMS provider: remembers the last code sent to each phone.
-class CapturingOtpSender implements OtpSender {
-  readonly codes = new Map<string, string>();
+// Stands in for Google: hands out ID tokens for test identities and accepts only those.
+// The real verifier is tested on its own in tests/platform/google-id-token.test.ts.
+class FakeGoogleTokenVerifier implements GoogleTokenVerifier {
+  private readonly identitiesByToken = new Map<string, GoogleIdentity>();
 
-  send(phone: string, code: string): Promise<void> {
-    this.codes.set(phone, code);
-    return Promise.resolve();
+  issueIdToken(identity: GoogleIdentity): string {
+    const idToken = `fake-google-id-token-${randomUUID()}`;
+    this.identitiesByToken.set(idToken, identity);
+    return idToken;
+  }
+
+  verify(idToken: string): Promise<GoogleIdentity> {
+    const identity = this.identitiesByToken.get(idToken);
+    return identity
+      ? Promise.resolve(identity)
+      : Promise.reject(ApiError.unauthorized("Google sign-in failed"));
+  }
+
+  clear(): void {
+    this.identitiesByToken.clear();
   }
 }
 
-export const otpSender = new CapturingOtpSender();
-export const container = createContainer({
-  otpSender,
-  // Cheaper hashing keeps the test run fast. Production uses the default cost.
-  passwordHasher: new PasswordHasher({ N: 2 ** 10, r: 8, p: 1 }),
-});
+export const googleTokenVerifier = new FakeGoogleTokenVerifier();
+export const container = createContainer({ googleTokenVerifier });
 export const app = createApp(container);
 export { prisma, redis };
 
 // Empties every table and the test Redis database. Call in beforeEach.
 export async function resetState(): Promise<void> {
-  await prisma.$executeRaw`TRUNCATE TABLE "UploadedFile", "Session", "AdminUser", "User", "RolePermission", "Role" CASCADE`;
+  await prisma.$executeRaw`TRUNCATE TABLE uploads, sessions, invites, join_requests, classroom_members, classrooms, memberships, organizations, admin_permissions, admins, admin_roles, users CASCADE`;
   await redis.flushdb();
-  otpSender.codes.clear();
+  googleTokenVerifier.clear();
 }
 
 // Closes connections. Call in afterAll.
