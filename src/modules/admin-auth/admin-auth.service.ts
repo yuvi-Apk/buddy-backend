@@ -114,14 +114,14 @@ export class AdminAuthService {
     return this.sessions.revoke(sessionId);
   }
 
-  /** Used by verifyAdmin on every request. Null when the account is missing or disabled. */
+  // Used by verifyAdmin on every request. Null when the account is missing or disabled.
   getAuthenticatedAdmin(
     adminUserId: string
   ): Promise<AuthenticatedAdmin | null> {
     return this.admins.findActiveProfile(adminUserId);
   }
 
-  /** The admin panel uses this to decide which menu items to show. */
+  // The admin panel uses this to decide which menu items to show.
   allowedPages(admin: AuthenticatedAdmin): Promise<PageName[]> {
     return this.permissions.allowedPages(admin.role);
   }

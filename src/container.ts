@@ -27,7 +27,7 @@ import { createUploadModule } from "./modules/upload/index.js";
 import { createUserAuthModule } from "./modules/user-auth/index.js";
 import type { Guards, Infra } from "./types/module.types.js";
 
-/** What GET /health/ready checks. Each check throws when its dependency is down. */
+// What GET /health/ready checks. Each check throws when its dependency is down.
 function healthChecks(): Record<string, HealthCheck> {
   return {
     postgres: async () => {
@@ -39,7 +39,7 @@ function healthChecks(): Record<string, HealthCheck> {
   };
 }
 
-/** Parts that tests (or a different deployment) may swap for their own implementation. */
+// Parts that tests (or a different deployment) may swap for their own implementation.
 export interface ContainerOverrides {
   otpSender?: OtpSender;
   passwordHasher?: PasswordHasher;
@@ -105,7 +105,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
 
     healthChecks: healthChecks(),
 
-    /** Closes database and cache connections. Called on shutdown and after tests. */
+    // Closes database and cache connections. Called on shutdown and after tests.
     shutdown: async () => {
       await prisma.$disconnect();
       await redis.quit();

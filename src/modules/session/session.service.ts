@@ -34,7 +34,7 @@ export class SessionService {
     private readonly config: SessionConfig
   ) {}
 
-  /** Starts a session after a successful login. */
+  // Starts a session after a successful login.
   async create(subject: Subject, client: ClientInfo): Promise<IssuedSession> {
     const sessionId = randomUUID();
     const refreshToken = this.tokens.generateRefreshToken(sessionId);
@@ -52,7 +52,7 @@ export class SessionService {
     return { sessionId, refreshToken, expiresAt };
   }
 
-  /** True when the session exists, is not revoked or expired, and belongs to this subject. */
+  // True when the session exists, is not revoked or expired, and belongs to this subject.
   async isActive(sessionId: string, subject: Subject): Promise<boolean> {
     const expected = cacheValue(subject);
 
@@ -70,11 +70,9 @@ export class SessionService {
     return cacheValue(owner) === expected;
   }
 
-  /**
-   * Exchanges a refresh token for a new one. Each refresh token works once.
-   * If an already-used token shows up again, someone may have stolen it, so the whole
-   * session is revoked and both parties have to log in again.
-   */
+  // Exchanges a refresh token for a new one. Each refresh token works once.
+  // If an already-used token shows up again, someone may have stolen it, so the whole
+  // session is revoked and both parties have to log in again.
   async rotate(
     refreshToken: string,
     subjectType: SubjectType,
@@ -108,13 +106,13 @@ export class SessionService {
     return { sessionId, refreshToken: newRefreshToken, expiresAt, subject };
   }
 
-  /** Logout: the session stops working on the very next request. */
+  // Logout: the session stops working on the very next request.
   async revoke(sessionId: string): Promise<void> {
     await this.sessions.revoke(sessionId);
     await this.redis.del(cacheKey(sessionId));
   }
 
-  /** Logout everywhere, for example after a password change or when an account is disabled. */
+  // Logout everywhere, for example after a password change or when an account is disabled.
   async revokeAllForSubject(subject: Subject): Promise<void> {
     const ids = await this.sessions.revokeAllForSubject(subject);
     if (ids.length > 0) {
@@ -126,7 +124,7 @@ export class SessionService {
     return this.sessions.listActiveForSubject(subject);
   }
 
-  /** Revokes one session, but only if it belongs to the caller (core-rules #8). */
+  // Revokes one session, but only if it belongs to the caller (core-rules #8).
   async revokeOwned(sessionId: string, subject: Subject): Promise<void> {
     const owner = await this.sessions.findActiveSubject(sessionId);
     const isOwner =

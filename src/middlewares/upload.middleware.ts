@@ -43,7 +43,7 @@ const imageUpload = multer({
   },
 });
 
-/** Accepts exactly one image in the given form field. The file ends up on req.file. */
+// Accepts exactly one image in the given form field. The file ends up on req.file.
 export const uploadSingleImage = (fieldName: string): RequestHandler => {
   const parse = imageUpload.single(fieldName);
 

@@ -19,14 +19,14 @@ export const userRefreshBody = z.strictObject({
 });
 export type UserRefreshBody = z.infer<typeof userRefreshBody>;
 
-/** The logged-in app user, attached to the request as req.user by verifyUser. */
+// The logged-in app user, attached to the request as req.user by verifyUser.
 export interface AuthenticatedUser {
   id: string;
   phone: string;
   name: string | null;
 }
 
-/** The mobile app keeps both tokens in the device's secure storage. */
+// The mobile app keeps both tokens in the device's secure storage.
 export interface UserLoginResult {
   accessToken: string;
   refreshToken: string;

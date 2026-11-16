@@ -34,7 +34,7 @@ export interface Paginated<T> {
   };
 }
 
-/** Converts page/limit into Prisma's skip/take. */
+// Converts page/limit into Prisma's skip/take.
 export const toSkipTake = ({ page, limit }: PageParams) => ({
   skip: (page - 1) * limit,
   take: limit,

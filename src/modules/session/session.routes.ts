@@ -9,7 +9,7 @@ import { sessionIdParams } from "./session.schema.js";
 
 export function createSessionRouter(
   controller: SessionController,
-  /** The guards for this mount, e.g. [verifyAdmin, ownAccountRoute()] or [verifyUser]. */
+  // The guards for this mount, e.g. [verifyAdmin, ownAccountRoute()] or [verifyUser].
   guards: RequestHandler[]
 ): Router {
   const router = Router();

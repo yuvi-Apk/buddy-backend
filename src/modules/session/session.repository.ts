@@ -40,7 +40,7 @@ export class SessionRepository {
     });
   }
 
-  /** The session's owner, or null when it does not exist, is revoked or has expired. */
+  // The session's owner, or null when it does not exist, is revoked or has expired.
   async findActiveSubject(id: string): Promise<Subject | null> {
     const session = await this.prisma.session.findFirst({
       where: { id, revokedAt: null, expiresAt: { gt: new Date() } },
@@ -52,11 +52,9 @@ export class SessionRepository {
       : null;
   }
 
-  /**
-   * Swaps the refresh token in ONE statement. The WHERE clause is the check, so when two
-   * requests present the same token only one of them can succeed (core-rules #3).
-   * Returns true when the swap happened.
-   */
+  // Swaps the refresh token in ONE statement. The WHERE clause is the check, so when two
+  // requests present the same token only one of them can succeed (core-rules #3).
+  // Returns true when the swap happened.
   async rotateRefreshToken(input: {
     id: string;
     subjectType: SubjectType;
@@ -83,7 +81,7 @@ export class SessionRepository {
     return count === 1;
   }
 
-  /** Used only to detect a refresh token that was already used. Returns hashes on purpose. */
+  // Used only to detect a refresh token that was already used. Returns hashes on purpose.
   async findPreviousTokenHash(id: string): Promise<string | null> {
     const session = await this.prisma.session.findFirst({
       where: { id, revokedAt: null },
@@ -99,7 +97,7 @@ export class SessionRepository {
     });
   }
 
-  /** Revokes every active session of a subject and returns their IDs. */
+  // Revokes every active session of a subject and returns their IDs.
   async revokeAllForSubject(subject: Subject): Promise<string[]> {
     const where = {
       ...subjectColumn(subject),

@@ -40,12 +40,12 @@ export const listRolesQuery = paginationQuery.extend({
 });
 export type ListRolesQuery = z.infer<typeof listRolesQuery>;
 
-/** What the API returns for a role. */
+// What the API returns for a role.
 export interface RoleDto {
   id: string;
   name: string;
   description: string | null;
-  /** Pages this role may access. */
+  // Pages this role may access.
   pages: string[];
   createdAt: Date;
   updatedAt: Date;

@@ -11,7 +11,7 @@ import {
 } from "../../config/rbac.config.js";
 import type { Redis } from "../../config/redis.js";
 
-/** Implemented by RoleRepository. Kept as an interface so core does not depend on a module. */
+// Implemented by RoleRepository. Kept as an interface so core does not depend on a module.
 export interface RolePagesLoader {
   findAllowedPages(roleId: string): Promise<string[]>;
 }
@@ -30,7 +30,7 @@ export class PermissionService {
     private readonly redis: Redis
   ) {}
 
-  /** Every page this role may access. SUPER_ADMIN gets all of them. */
+  // Every page this role may access. SUPER_ADMIN gets all of them.
   async allowedPages(role: RoleRef): Promise<PageName[]> {
     if (role.name === SUPER_ADMIN_ROLE) return [...PAGES];
 
@@ -53,7 +53,7 @@ export class PermissionService {
     return pages.some((page) => allowed.includes(page));
   }
 
-  /** Call after a role's permissions change or the role is deleted. */
+  // Call after a role's permissions change or the role is deleted.
   async invalidate(roleId: string): Promise<void> {
     await this.redis.del(cacheKey(roleId));
   }

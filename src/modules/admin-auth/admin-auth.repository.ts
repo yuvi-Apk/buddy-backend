@@ -10,10 +10,8 @@ const profileSelect = {
 export class AdminAuthRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  /**
-   * For the login check only: this is the one method that returns the password hash.
-   * Do not use it anywhere else (core-rules #9).
-   */
+  // For the login check only: this is the one method that returns the password hash.
+  // Do not use it anywhere else (core-rules #9).
   findWithPasswordHashByEmail(email: string) {
     return this.prisma.adminUser.findUnique({
       where: { email },
@@ -26,7 +24,7 @@ export class AdminAuthRepository {
     });
   }
 
-  /** The admin's public profile, or null when the account is missing or disabled. */
+  // The admin's public profile, or null when the account is missing or disabled.
   findActiveProfile(id: string) {
     return this.prisma.adminUser.findFirst({
       where: { id, isActive: true },
@@ -34,10 +32,8 @@ export class AdminAuthRepository {
     });
   }
 
-  /**
-   * Counts a failed login. When the count reaches maxAttempts, the account is locked until
-   * lockUntil and the count starts again. The increment is atomic.
-   */
+  // Counts a failed login. When the count reaches maxAttempts, the account is locked until
+  // lockUntil and the count starts again. The increment is atomic.
   async recordFailedLogin(
     id: string,
     maxAttempts: number,

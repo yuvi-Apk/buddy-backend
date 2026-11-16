@@ -22,7 +22,7 @@ import { app, closeTestApp, prisma, resetState } from "../helpers/testApp.js";
 
 const UPLOADS = "/api/v1/admin/uploads";
 
-/** Files created by these tests, removed again in afterAll. */
+// Files created by these tests, removed again in afterAll.
 const createdUrls: string[] = [];
 const diskPath = (url: string) =>
   path.join(PUBLIC_IMAGES_DIR, url.replace(/^\/images\//, ""));
@@ -33,7 +33,7 @@ afterAll(async () => {
   await closeTestApp();
 });
 
-/** A real, noisy (hard to compress) image. */
+// A real, noisy (hard to compress) image.
 function makeImage(format: "png" | "jpeg", width = 1200, height = 900) {
   const noise = Buffer.alloc(width * height * 3);
   for (let i = 0; i < noise.length; i++) noise[i] = (i * 31 + (i >> 3)) % 256;

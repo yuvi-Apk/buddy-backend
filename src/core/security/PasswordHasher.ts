@@ -47,7 +47,7 @@ export class PasswordHasher {
     ].join("$");
   }
 
-  /** Returns false for a wrong password and for a malformed stored hash. Never throws. */
+  // Returns false for a wrong password and for a malformed stored hash. Never throws.
   async verify(password: string, storedHash: string): Promise<boolean> {
     const [scheme, n, r, p, saltB64, keyB64] = storedHash.split("$");
     if (scheme !== "scrypt" || !n || !r || !p || !saltB64 || !keyB64) {

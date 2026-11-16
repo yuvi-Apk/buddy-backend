@@ -61,7 +61,7 @@ export function createVerifyAdmin({
 // requirePermission answers "may this admin use this page?". It must come after verifyAdmin.
 // SUPER_ADMIN passes every check. Pages are defined in src/config/rbac.config.ts.
 export function createPermissionGuards(permissionService: PermissionService) {
-  /** The admin's role must have access to this page. */
+  // The admin's role must have access to this page.
   const requirePermission = (page: PageName): RequestHandler =>
     markGuard(
       asyncHandler(async (req, _res, next) => {
@@ -77,7 +77,7 @@ export function createPermissionGuards(permissionService: PermissionService) {
       "permission"
     );
 
-  /** The admin's role must have access to at least one of these pages. */
+  // The admin's role must have access to at least one of these pages.
   const requireAnyPermission = (pages: PageName[]): RequestHandler =>
     markGuard(
       asyncHandler(async (req, _res, next) => {

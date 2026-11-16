@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Who a session belongs to: an admin panel account or an app user. */
+// Who a session belongs to: an admin panel account or an app user.
 export type SubjectType = "ADMIN" | "USER";
 
 export interface Subject {
@@ -8,13 +8,13 @@ export interface Subject {
   id: string;
 }
 
-/** Request details saved with a session so people can recognise their devices. */
+// Request details saved with a session so people can recognise their devices.
 export interface ClientInfo {
   userAgent?: string;
   ip?: string;
 }
 
-/** Returned to the client after login or refresh. */
+// Returned to the client after login or refresh.
 export interface IssuedSession {
   sessionId: string;
   refreshToken: string;

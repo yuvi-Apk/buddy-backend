@@ -1,5 +1,5 @@
-// Database schema. Change it only through migrations:
-//   pnpm exec prisma migrate dev --name <what_changed>
+// Change only through migrations: pnpm exec prisma migrate dev --name <what_changed>
+// Naming and comments: .claude/rules/naming.md
 
 generator client {
   provider = "prisma-client"
@@ -10,87 +10,121 @@ datasource db {
   provider = "postgresql"
 }
 
-// ---------------------------------------------------------------------------
-// Admin panel: staff accounts, roles and page permissions
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Super admin panel
+// ===========================================================================
 
-model Role {
-  id          String   @id @default(uuid())
+// Editable role on the super admin panel, e.g. "Content manager".
+model AdminRole {
+  id          String   @id @default(uuid(7))
   name        String   @unique
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  permissions RolePermission[]
-  adminUsers  AdminUser[]
+  permissions AdminPermission[]
+  admins      Admin[]
+
+  @@map("admin_roles")
 }
 
-// One row per (role, page). `page` is a PageName from src/config/rbac.config.ts.
-model RolePermission {
-  roleId   String
-  page     String
-  isAccess Boolean @default(false)
+// Whether a role can open one panel page.
+model AdminPermission {
+  roleId    String
+  // A PageName from src/config/rbac.config.ts.
+  pageName  String
+  canAccess Boolean @default(false)
 
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role AdminRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@id([roleId, page])
+  @@id([roleId, pageName])
+  @@map("admin_permissions")
 }
 
-model AdminUser {
-  id           String  @id @default(uuid())
-  name         String
-  email        String  @unique
-  passwordHash String
-  isActive     Boolean @default(true)
-  roleId       String
+// Platform staff. Google sign-in only, one device at a time.
+// The row is created first (seed or another admin); Google is linked on first sign-in.
+model Admin {
+  id              String    @id @default(uuid(7))
+  email           String    @unique // lowercase
+  googleAccountId String?   @unique // Google "sub"
+  name            String
+  avatarUrl       String?
+  isActive        Boolean   @default(true)
+  roleId          String
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  // Login lockout (core-rules #13)
-  failedLoginCount Int       @default(0)
-  lockedUntil      DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  role     Role           @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  sessions Session[]
-  uploads  UploadedFile[]
+  role                 AdminRole      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  sessions             Session[]
+  uploads              Upload[]
+  createdOrganizations Organization[]
+  sentInvites          Invite[]
 
   @@index([roleId])
+  @@map("admins")
 }
 
-// ---------------------------------------------------------------------------
-// App users (students): log in with a phone number and OTP
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Users
+// ===========================================================================
 
+enum ExamCategory {
+  GOVERNMENT_EXAM
+  SCHOOL
+  COLLEGE
+  OTHER
+}
+
+// Anyone on the user panel. No active membership = individual.
+// Rights inside an organization come from Membership.role.
 model User {
-  id        String   @id @default(uuid())
-  phone     String   @unique
-  name      String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String        @id @default(uuid(7))
+  email           String        @unique // lowercase
+  googleAccountId String        @unique // Google "sub"
+  name            String
+  avatarUrl       String?
+  examCategory    ExamCategory?
 
-  sessions Session[]
+  // Set by an admin. false = at most one active membership.
+  canJoinMultipleOrganizations Boolean @default(false)
+  // ACTIVE + SUSPENDED memberships. Atomic updates only (core-rules #3).
+  activeMembershipCount        Int     @default(0)
+
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sessions             Session[]
+  memberships          Membership[]
+  sentJoinRequests     JoinRequest[] @relation("JoinRequestSentBy")
+  reviewedJoinRequests JoinRequest[] @relation("JoinRequestReviewedBy")
+  sentInvites          Invite[]      @relation("InviteSentByUser")
+  acceptedInvites      Invite[]      @relation("InviteAcceptedByUser")
+
+  @@map("users")
 }
 
-// ---------------------------------------------------------------------------
-// Sessions: one row per login, for both admins and users
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Sessions
+// ===========================================================================
 
-enum SessionSubject {
+enum SessionOwnerType {
   ADMIN
   USER
 }
 
+// One sign-in on one device, for an admin or a user.
 model Session {
-  id          String         @id @default(uuid())
-  subjectType SessionSubject
-  adminUserId String?
-  userId      String?
+  // Generated in code; part of the refresh token.
+  id        String           @id
+  ownerType SessionOwnerType
+  adminId   String? // set when ownerType = ADMIN
+  userId    String? // set when ownerType = USER
 
-  // Only hashes are stored (core-rules #12). The previous hash is kept to detect a stolen,
-  // already-used refresh token.
   refreshTokenHash         String
+  // Detects reuse of a stolen refresh token.
   previousRefreshTokenHash String?
 
   expiresAt  DateTime
@@ -98,33 +132,233 @@ model Session {
   lastUsedAt DateTime  @default(now())
   createdAt  DateTime  @default(now())
 
-  userAgent String?
-  ip        String?
+  deviceUserAgent String?
+  deviceIp        String?
 
-  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
-  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admin Admin? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([adminUserId])
-  @@index([userId])
+  @@index([adminId, revokedAt])
+  @@index([userId, revokedAt])
   @@index([expiresAt])
+  @@map("sessions")
 }
 
-// ---------------------------------------------------------------------------
-// Uploads: one row per stored file, so files can be listed, audited and deleted safely
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Organizations, memberships, classrooms
+// ===========================================================================
 
-model UploadedFile {
-  id          String   @id @default(uuid())
-  url         String   @unique
-  folder      String
-  contentType String
-  sizeBytes   Int
-  createdAt   DateTime @default(now())
+enum OrganizationType {
+  SCHOOL
+  COLLEGE
+  COACHING
+  OTHER
+}
 
-  // Kept when the admin is deleted, so the file can still be found and cleaned up.
+enum OrganizationPlan {
+  BASIC
+}
+
+// A school, college or coaching centre.
+model Organization {
+  id                String           @id @default(uuid(7))
+  name              String
+  type              OrganizationType @default(SCHOOL)
+  slug              String           @unique
+  joinCode          String           @unique
+  isJoinCodeEnabled Boolean          @default(true)
+  plan              OrganizationPlan @default(BASIC)
+  maxMembers        Int? // null = unlimited
+  // ACTIVE + SUSPENDED memberships. Atomic updates only (core-rules #3).
+  activeMemberCount Int              @default(0)
+  isActive          Boolean          @default(true)
+  createdByAdminId  String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  createdByAdmin   Admin?            @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  memberships      Membership[]
+  classrooms       Classroom[]
+  classroomMembers ClassroomMember[]
+  invites          Invite[]
+  joinRequests     JoinRequest[]
+
+  @@map("organizations")
+}
+
+enum MembershipRole {
+  STUDENT
+  TEACHER
+  ORGANIZATION_ADMIN
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED // still counts against maxMembers
+  LEFT
+  REMOVED
+}
+
+enum JoinMethod {
+  ADDED_BY_ADMIN
+  ACCEPTED_INVITE
+  APPROVED_JOIN_REQUEST
+}
+
+// A user in one organization. Leaving keeps the row; rejoining reactivates it.
+model Membership {
+  id                            String           @id @default(uuid(7))
+  organizationId                String
+  userId                        String
+  role                          MembershipRole
+  status                        MembershipStatus @default(ACTIVE)
+  joinMethod                    JoinMethod
+  // User's consent to show the organization their data from before joining.
+  sharePastDataWithOrganization Boolean          @default(false)
+  joinedAt                      DateTime         @default(now())
+  leftAt                        DateTime?
+  updatedAt                     DateTime         @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  classroomMembers ClassroomMember[]
+
+  @@unique([organizationId, userId])
+  @@unique([id, organizationId]) // composite FK target
+  @@index([userId, status])
+  @@index([organizationId, status, role])
+  @@map("memberships")
+}
+
+// A class in an organization, e.g. "Class 10 A".
+model Classroom {
+  id             String   @id @default(uuid(7))
+  organizationId String
+  name           String
+  academicYear   String? // e.g. "2026-27"
+  isArchived     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  members      ClassroomMember[]
+  invites      Invite[]
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId]) // composite FK target
+  @@index([organizationId, isArchived])
+  @@map("classrooms")
+}
+
+// A teacher or student in a classroom; the role comes from the membership.
+// Composite FKs keep the classroom and membership in the same organization.
+model ClassroomMember {
+  id             String   @id @default(uuid(7))
+  classroomId    String
+  membershipId   String
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  classroom    Classroom    @relation(fields: [classroomId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  membership   Membership   @relation(fields: [membershipId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([classroomId, membershipId])
+  @@index([membershipId])
+  @@index([organizationId])
+  @@map("classroom_members")
+}
+
+// ===========================================================================
+// Joining: invite by email (Way 1), join code request (Way 2)
+// ===========================================================================
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+// Email invite to join an organization, sent by an organization admin or an admin.
+model Invite {
+  id               String         @id @default(uuid(7))
+  organizationId   String
+  classroomId      String? // also add to this classroom
+  inviteeEmail     String // lowercase
+  tokenHash        String         @unique
+  roleOnJoin       MembershipRole @default(STUDENT)
+  status           InviteStatus   @default(PENDING)
+  expiresAt        DateTime
+  // Exactly one of sentByUserId / sentByAdminId is set.
+  sentByUserId     String?
+  sentByAdminId    String?
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime       @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  classroom      Classroom?   @relation(fields: [classroomId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  sentByUser     User?        @relation("InviteSentByUser", fields: [sentByUserId], references: [id], onDelete: SetNull)
+  sentByAdmin    Admin?       @relation(fields: [sentByAdminId], references: [id], onDelete: SetNull)
+  acceptedByUser User?        @relation("InviteAcceptedByUser", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+  @@index([inviteeEmail, status])
+  @@map("invites")
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// A user's request to join with the organization's join code.
+model JoinRequest {
+  id                            String            @id @default(uuid(7))
+  userId                        String
+  organizationId                String
+  requestedRole                 MembershipRole    @default(STUDENT) // never ORGANIZATION_ADMIN
+  status                        JoinRequestStatus @default(PENDING)
+  // Copied to the membership on approval.
+  sharePastDataWithOrganization Boolean           @default(false)
+  requesterNote                 String?
+  reviewedByUserId              String?
+  reviewNote                    String?
+  reviewedAt                    DateTime?
+  createdAt                     DateTime          @default(now())
+  updatedAt                     DateTime          @updatedAt
+
+  user           User         @relation("JoinRequestSentBy", fields: [userId], references: [id], onDelete: Restrict)
+  reviewedByUser User?        @relation("JoinRequestReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, status, createdAt])
+  @@index([userId, status])
+  @@map("join_requests")
+}
+
+// ===========================================================================
+// Uploads
+// ===========================================================================
+
+// One stored file.
+model Upload {
+  id                String   @id @default(uuid(7))
+  url               String   @unique
+  folder            String
+  contentType       String
+  sizeBytes         Int
+  // Kept as null if the admin is deleted, so the file can still be cleaned up.
   uploadedByAdminId String?
-  uploadedBy        AdminUser? @relation(fields: [uploadedByAdminId], references: [id], onDelete: SetNull)
+  createdAt         DateTime @default(now())
+
+  uploadedByAdmin Admin? @relation(fields: [uploadedByAdminId], references: [id], onDelete: SetNull)
 
   @@index([folder, createdAt])
   @@index([uploadedByAdminId])
+  @@map("uploads")
 }

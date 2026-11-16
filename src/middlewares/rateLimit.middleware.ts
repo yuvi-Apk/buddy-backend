@@ -6,11 +6,11 @@ import { RedisStore, type RedisReply } from "rate-limit-redis";
 import type { Redis } from "../config/redis.js";
 
 interface RateLimitOptions {
-  /** Short unique name, used as the Redis key prefix. */
+  // Short unique name, used as the Redis key prefix.
   name: string;
-  /** Length of the counting window in seconds. */
+  // Length of the counting window in seconds.
   windowSeconds: number;
-  /** Requests allowed per IP inside one window. */
+  // Requests allowed per IP inside one window.
   limit: number;
 }
 
@@ -40,9 +40,9 @@ export function createRateLimiter(
 }
 
 export interface RateLimiters {
-  /** Every API route: stops one client from flooding the server. */
+  // Every API route: stops one client from flooding the server.
   global: RequestHandler;
-  /** Login, OTP and refresh routes: slows down password and code guessing. */
+  // Login, OTP and refresh routes: slows down password and code guessing.
   auth: RequestHandler;
 }
 

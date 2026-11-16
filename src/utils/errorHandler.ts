@@ -57,7 +57,7 @@ export const errorHandler = (
     return next(err);
   }
 
-  /* ZOD VALIDATION ERRORS */
+  // Zod validation errors
   if (err instanceof ZodError) {
     return res.status(400).json(
       body(
@@ -70,7 +70,7 @@ export const errorHandler = (
     );
   }
 
-  /* CUSTOM API ERRORS */
+  // Our own ApiErrors
   if (err instanceof ApiError) {
     if (err.statusCode >= 500) {
       req.log.error({ err }, "ApiError with 5xx status");
@@ -78,7 +78,7 @@ export const errorHandler = (
     return res.status(err.statusCode).json(body(err.message, err.errors));
   }
 
-  /* PRISMA ERRORS: fixed messages only. The Prisma error itself names tables and columns. */
+  // Prisma errors: fixed messages only, the raw error names tables and columns
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     const mapped = PRISMA_ERRORS[err.code];
     if (mapped) {
@@ -88,14 +88,14 @@ export const errorHandler = (
     return res.status(500).json(body("Internal Server Error"));
   }
 
-  /* UPLOAD ERRORS */
+  // Upload errors
   if (err instanceof MulterError) {
     return err.code === "LIMIT_FILE_SIZE"
       ? res.status(413).json(body("File is too large"))
       : res.status(400).json(body("Invalid file upload"));
   }
 
-  /* JWT ERRORS: TokenExpiredError extends JsonWebTokenError, so it is checked first */
+  // JWT errors: TokenExpiredError extends JsonWebTokenError, so check it first
   if (err instanceof jwt.TokenExpiredError) {
     return res.status(401).json(body("Token expired"));
   }
@@ -103,7 +103,7 @@ export const errorHandler = (
     return res.status(401).json(body("Invalid token"));
   }
 
-  /* BODY PARSER AND OTHER 4xx MIDDLEWARE ERRORS */
+  // Body parser and other 4xx middleware errors
   if (err instanceof Error) {
     const status = clientErrorStatus(err);
     if (status !== undefined) {
@@ -113,7 +113,7 @@ export const errorHandler = (
     }
   }
 
-  /* EVERYTHING ELSE: log the real error, tell the client nothing about it */
+  // Anything else: log the real error, tell the client nothing
   req.log.error({ err }, "Unhandled error");
   return res.status(500).json(body("Internal Server Error"));
 };

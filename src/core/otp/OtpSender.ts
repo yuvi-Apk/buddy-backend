@@ -8,10 +8,8 @@ export interface OtpSender {
   send(phone: string, code: string): Promise<void>;
 }
 
-/**
- * Development only: writes the code to the server log instead of sending an SMS.
- * env.ts refuses to start in production with this sender.
- */
+// Development only: writes the code to the server log instead of sending an SMS.
+// env.ts refuses to start in production with this sender.
 export class LogOtpSender implements OtpSender {
   constructor(private readonly logger: Logger) {}
 

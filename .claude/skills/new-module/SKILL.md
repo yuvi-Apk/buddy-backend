@@ -15,7 +15,7 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
 
 ## Before writing code
 
-1. Read `.claude/rules/modules.md` and the six files in `src/modules/role/`. The full guide for
+1. Read `.claude/rules/modules.md`, `.claude/rules/naming.md` and the six files in `src/modules/role/`. The full guide for
    people is `docs/03-create-a-module.md`.
 2. Decide: who calls it (admin panel, app, or both), which table(s) it owns, and whether the
    rows belong to someone (a school, a user). If they do, plan the ownership check now.
@@ -25,7 +25,8 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
 1. **Database** (skip if no new table). Edit `prisma/schema.prisma`, then run
    `pnpm exec prisma migrate dev --name add_<feature>`. Add the new table to the `TRUNCATE`
    list in `tests/helpers/testApp.ts`.
-   - School-owned tables get a required `schoolId` column and an index on it.
+   - Organization-owned tables get a required `organizationId` column and an index on it.
+   - Name the model and fields, and add the table `@@map`, as in `.claude/rules/naming.md`.
 2. **`<feature>.schema.ts`**: Zod schemas with `z.strictObject` for body, query and params, the
    types inferred from them, and a `<Feature>Dto` interface for what the API returns.
    List queries extend `paginationQuery` from `src/utils/pagination.ts`.
@@ -66,7 +67,8 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
 
 ## Finish
 
-Run `pnpm lint`, `pnpm typecheck` and `pnpm test`. All three must pass.
+Check every new name against `.claude/rules/naming.md` (a reader knows what it holds or does
+without opening another file). Run `pnpm lint`, `pnpm typecheck` and `pnpm test`. All three must pass.
 `tests/guardrails/route-guards.test.ts` fails if any new route has no guard, and
 `tests/guardrails/eslint-rules.test.ts` covers the import rules.
 

@@ -12,7 +12,7 @@ const GENERIC_ERROR = "Invalid email or password";
 beforeEach(resetState);
 afterAll(closeTestApp);
 
-/** Finds one Set-Cookie header by cookie name. */
+// Finds one Set-Cookie header by cookie name.
 function cookie(res: request.Response, name: string): string | undefined {
   const header = res.headers["set-cookie"] as unknown as string[] | undefined;
   return header?.find((value) => value.startsWith(`${name}=`));

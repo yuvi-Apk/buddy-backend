@@ -74,7 +74,7 @@ export class RoleRepository implements RolePagesLoader {
     return toDto(row);
   }
 
-  /** Updates the role and, when pages are given, replaces its permissions in one transaction. */
+  // Updates the role and, when pages are given, replaces its permissions in one transaction.
   async update(
     id: string,
     input: { name?: string; description?: string | null; pages?: string[] }
@@ -105,7 +105,7 @@ export class RoleRepository implements RolePagesLoader {
     return this.prisma.adminUser.count({ where: { roleId } });
   }
 
-  /** Used by PermissionService to fill its cache. */
+  // Used by PermissionService to fill its cache.
   async findAllowedPages(roleId: string): Promise<string[]> {
     const rows = await this.prisma.rolePermission.findMany({
       where: { roleId, isAccess: true },

@@ -8,10 +8,10 @@ import { app } from "./testApp.js";
 export type Method = "get" | "post" | "patch" | "put" | "delete";
 export type Route = [Method, string];
 
-/** A valid UUID that matches no row. Use it in route paths for guard and 404 tests. */
+// A valid UUID that matches no row. Use it in route paths for guard and 404 tests.
 export const MISSING_ID = "00000000-0000-4000-8000-000000000000";
 
-/** Every route answers 401 without a token, and 401 for a user (app) token. */
+// Every route answers 401 without a token, and 401 for a user (app) token.
 export async function expectLoginRequired(routes: Route[]) {
   const user = await loginUser("+919800000099");
   for (const [method, path] of routes) {
@@ -25,10 +25,8 @@ export async function expectLoginRequired(routes: Route[]) {
   }
 }
 
-/**
- * Admin routes behind requirePermission(page): 401 without a login, and 403 for an admin
- * whose role does not have the page.
- */
+// Admin routes behind requirePermission(page): 401 without a login, and 403 for an admin
+// whose role does not have the page.
 export async function expectAdminPageRequired(routes: Route[], page: PageName) {
   await expectLoginRequired(routes);
 

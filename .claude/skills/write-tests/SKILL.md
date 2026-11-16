@@ -127,4 +127,5 @@ for (const body of [{ name: "x" }, { name: "OK", extra: true }]) {
 - [ ] Rows with an owner: another caller gets 404
 - [ ] Success tests check that no hash or internal field is in the body
 - [ ] Lists: `meta` checked, `limit=101` gives 400
+- [ ] Test titles say the expected result; fixture names say who they are (`.claude/rules/naming.md`)
 - [ ] No test deleted, no file under `src/` changed

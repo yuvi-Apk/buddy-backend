@@ -11,8 +11,8 @@ paths:
 
 - Every query has an explicit `select`. Never return a whole row (core-rules #9).
 - Never return a password, OTP or token hash unless the method name says so (`findWithPasswordHash`).
-- School-owned tables get a required `schoolId` column with an index, and every repository method
-  for them takes `schoolId` as a required argument.
+- Organization-owned tables get a required `organizationId` column with an index, and every
+  repository method for them takes `organizationId` as a required argument.
 - Several writes that must succeed together: `this.prisma.$transaction(...)`.
 - No `$queryRawUnsafe` / `$executeRawUnsafe`. Tagged `$queryRaw\`...\`` is allowed when Prisma can't express a query.
 
@@ -28,6 +28,13 @@ if (count === 0) throw new ApiError(409, "Insufficient balance");
 ```
 
 Never read a value, change it in code, and write it back.
+
+## Naming
+
+Follow `naming.md`: short plain model names (`Invite`, `JoinRequest`), the `Admin` prefix only for
+super admin panel staff. Only tables are mapped (`@@map("join_requests")`); columns and enums keep
+their Prisma names. In tagged `$queryRaw`, quote camelCase columns:
+`SELECT id FROM admins WHERE id = ${adminId} FOR UPDATE`, `WHERE "organizationId" = ${organizationId}`.
 
 ## Migrations
 

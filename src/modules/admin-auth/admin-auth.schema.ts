@@ -13,7 +13,7 @@ export const adminRefreshBody = z.strictObject({
 });
 export type AdminRefreshBody = z.infer<typeof adminRefreshBody>;
 
-/** The logged-in admin, attached to the request as req.adminUser by verifyAdmin. */
+// The logged-in admin, attached to the request as req.adminUser by verifyAdmin.
 export interface AuthenticatedAdmin {
   id: string;
   name: string;

@@ -289,7 +289,7 @@ describe("SessionService", () => {
   });
 });
 
-/** Logs in an admin and returns the access token. */
+// Logs in an admin and returns the access token.
 const adminToken = async (email: string) =>
   (await loginAdmin(email)).body.data.accessToken as string;
 

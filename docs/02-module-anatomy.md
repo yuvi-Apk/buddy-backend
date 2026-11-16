@@ -13,7 +13,8 @@ from `src/modules/role/`, shortened.
 | `index.ts`                | Builds the module; the only file others import | The five files above                               |
 
 Naming: folder and files in kebab-case and singular (`learning-path`), classes in PascalCase
-(`LearningPathService`). Imports end in `.js` even though the files are `.ts`.
+(`LearningPathService`). Imports end in `.js` even though the files are `.ts`. Variables,
+functions and database names follow [the naming rules](../.claude/rules/naming.md).
 
 ## schema.ts: what may come in
 
@@ -36,7 +37,7 @@ export const listRolesQuery = paginationQuery.extend({
   search: z.string().trim().min(1).max(50).optional(),
 });
 
-/** What the API returns for a role. */
+// What the API returns for a role.
 export interface RoleDto {
   id: string;
   name: string;

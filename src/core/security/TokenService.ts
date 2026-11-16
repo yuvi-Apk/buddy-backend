@@ -47,7 +47,7 @@ export class TokenService {
     return this.sign(payload, this.config.userSecret, "user");
   }
 
-  /** Throws a 401 ApiError when the token is missing, expired, forged or of the wrong kind. */
+  // Throws a 401 ApiError when the token is missing, expired, forged or of the wrong kind.
   verifyAdminAccessToken(token: string): AdminJwtPayload {
     return this.verify(
       token,
@@ -72,7 +72,7 @@ export class TokenService {
     return `${sessionId}.${randomBytes(32).toString("base64url")}`;
   }
 
-  /** Returns the session ID inside a refresh token, or null when the format is wrong. */
+  // Returns the session ID inside a refresh token, or null when the format is wrong.
   sessionIdFromRefreshToken(token: string): string | null {
     const [sessionId, secret, ...rest] = token.split(".");
     const wellFormed =
@@ -84,7 +84,7 @@ export class TokenService {
     return createHash("sha256").update(token).digest("hex");
   }
 
-  /** Constant-time comparison of two hashes. */
+  // Constant-time comparison of two hashes.
   hashesMatch(a: string, b: string): boolean {
     const left = Buffer.from(a);
     const right = Buffer.from(b);

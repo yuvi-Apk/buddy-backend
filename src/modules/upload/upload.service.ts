@@ -12,7 +12,7 @@ export class UploadService {
     private readonly storage: StorageProvider
   ) {}
 
-  /** Checks, compresses and stores an image that multer saved to a temp path. */
+  // Checks, compresses and stores an image that multer saved to a temp path.
   async uploadImage(input: {
     tempPath: string;
     folder: UploadFolder;
@@ -42,10 +42,8 @@ export class UploadService {
     return paginated(items, total, query);
   }
 
-  /**
-   * Deletes by ID, never by a path from the client: only files this app stored and
-   * recorded can be removed.
-   */
+  // Deletes by ID, never by a path from the client: only files this app stored and
+  // recorded can be removed.
   async delete(id: string): Promise<void> {
     const file = await this.uploads.findById(id);
     if (!file) throw ApiError.notFound("File not found");

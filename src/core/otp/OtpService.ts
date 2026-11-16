@@ -27,7 +27,7 @@ export class OtpService {
     private readonly hmacSecret: string
   ) {}
 
-  /** Creates a new code for this phone and returns it so it can be sent. */
+  // Creates a new code for this phone and returns it so it can be sent.
   async issue(phone: string): Promise<string> {
     const key = keys(phone);
 
@@ -64,7 +64,7 @@ export class OtpService {
     return code;
   }
 
-  /** True only for the right, unexpired, unused code. A correct code is consumed. */
+  // True only for the right, unexpired, unused code. A correct code is consumed.
   async verify(phone: string, code: string): Promise<boolean> {
     const key = keys(phone);
 

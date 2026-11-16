@@ -23,7 +23,7 @@ export class UserAuthService {
     private readonly otpSender: OtpSender
   ) {}
 
-  /** Sends a login code. The account itself is only created once the code is verified. */
+  // Sends a login code. The account itself is only created once the code is verified.
   async requestOtp(phone: string): Promise<void> {
     const code = await this.otp.issue(phone);
     await this.otpSender.send(phone, code);
@@ -67,7 +67,7 @@ export class UserAuthService {
     return this.sessions.revoke(sessionId);
   }
 
-  /** Used by verifyUser on every request. Null when the account is missing or disabled. */
+  // Used by verifyUser on every request. Null when the account is missing or disabled.
   getAuthenticatedUser(userId: string): Promise<AuthenticatedUser | null> {
     return this.users.findActiveProfile(userId);
   }

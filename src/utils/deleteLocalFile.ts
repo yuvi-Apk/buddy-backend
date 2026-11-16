@@ -16,16 +16,14 @@ const isInside = (root: string, target: string) => {
   );
 };
 
-/**
- * Deletes a local file safely. Accepts:
- *  - relative URL: /images/general/abc.webp
- *  - relative path: public/images/general/abc.webp
- *  - absolute path
- *
- * Refuses (and returns false for) anything outside the upload folders, so a crafted
- * path such as "../../.env" can never delete another file (core-rules #15).
- * Returns true when a file was deleted.
- */
+// Deletes a local file safely. Accepts:
+//  - relative URL: /images/general/abc.webp
+//  - relative path: public/images/general/abc.webp
+//  - absolute path
+//
+// Refuses (and returns false for) anything outside the upload folders, so a crafted
+// path such as "../../.env" can never delete another file (core-rules #15).
+// Returns true when a file was deleted.
 export const deleteLocalFile = async (filePath: string): Promise<boolean> => {
   if (!filePath) return false;
 

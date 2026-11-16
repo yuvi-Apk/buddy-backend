@@ -22,11 +22,9 @@ export interface UploadedImage {
   contentType: string;
 }
 
-/**
- * Checks that the multer temp file really is an image, converts it to WebP at or under
- * the target size, saves it through the storage provider and removes the temp file.
- * Returns the URL to store in the database.
- */
+// Checks that the multer temp file really is an image, converts it to WebP at or under
+// the target size, saves it through the storage provider and removes the temp file.
+// Returns the URL to store in the database.
 export const uploadAndCompressImage = async (
   inputPath: string, // multer file path
   options: ImageUploadOptions,

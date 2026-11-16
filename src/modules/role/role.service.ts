@@ -22,7 +22,7 @@ export class RoleService {
     return paginated(items, total, query);
   }
 
-  /** The page names that can be granted to a role. */
+  // The page names that can be granted to a role.
   listPages(): readonly string[] {
     return PAGES;
   }

@@ -10,7 +10,7 @@ import type {
 import type { AdminAuthService } from "./admin-auth.service.js";
 
 export interface AdminCookieConfig {
-  /** true in production: cookies are sent over HTTPS only. */
+  // true in production: cookies are sent over HTTPS only.
   secure: boolean;
   accessTokenTtlMinutes: number;
 }

@@ -29,5 +29,7 @@ by hand before handing over a change.
 | 21  | No new package unless nothing in Node or the current dependencies can do the job. The reason goes in the commit message.                                          | Review                                                      |
 | 22  | No `any`, no floating promises, no `console.log`.                                                                                                                 | ESLint                                                      |
 | 23  | A change is done only when `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.                                                                                    | Definition of done in `CLAUDE.md`                           |
+| 24  | Names say what a thing holds or does. Short plain models (`Invite`); tables plural snake_case via `@@map`; columns and enums not mapped. See `naming.md`.         | `naming.md`, review                                         |
+| 25  | Comments use `//` only, short, and explain _why_. Major sections get a `// ====` banner. No commented-out code.                                                   | `naming.md`, review                                         |
 
-AI features have their own rules (A1–A8) in `ai.md`.
+Naming and comment rules (#24, #25) are in `naming.md`. AI features have their own rules (A1–A8) in `ai.md`.

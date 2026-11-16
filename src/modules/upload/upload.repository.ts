@@ -47,7 +47,7 @@ export class UploadRepository {
     return { items, total };
   }
 
-  /** Returns true when a row was deleted. */
+  // Returns true when a row was deleted.
   async delete(id: string): Promise<boolean> {
     const { count } = await this.prisma.uploadedFile.deleteMany({
       where: { id },

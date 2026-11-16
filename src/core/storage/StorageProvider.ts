@@ -13,7 +13,7 @@ import {
 import { deleteLocalFile } from "../../utils/deleteLocalFile.js";
 
 export interface StorageProvider {
-  /** Saves the file and returns the URL to store in the database. */
+  // Saves the file and returns the URL to store in the database.
   save(file: {
     folder: UploadFolder;
     fileName: string;
@@ -21,11 +21,11 @@ export interface StorageProvider {
     contentType: string;
   }): Promise<string>;
 
-  /** Deletes a file by the URL that save() returned. */
+  // Deletes a file by the URL that save() returned.
   delete(url: string): Promise<void>;
 }
 
-/** Saves files under public/images/<folder> and serves them from /images/<folder>. */
+// Saves files under public/images/<folder> and serves them from /images/<folder>.
 export class LocalStorageProvider implements StorageProvider {
   async save(file: {
     folder: UploadFolder;

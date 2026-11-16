@@ -46,5 +46,6 @@ uses it. `src/modules/role/` is the reference for every step; the rules are in
 - [ ] Slow work (email, SMS, file processing, AI calls) is not done inside the request
 - [ ] Tests cover: success, 401, 403, 400 for bad input and unknown fields, 404, not the owner
 - [ ] Other modules are imported only through their `index.js`
+- [ ] Every new variable, function, field and test title follows `.claude/rules/naming.md`
 - [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
 - [ ] Stop and give the user the commit message (do not commit)

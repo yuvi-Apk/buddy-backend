@@ -16,7 +16,7 @@ export const listUploadsQuery = paginationQuery.extend({
 });
 export type ListUploadsQuery = z.infer<typeof listUploadsQuery>;
 
-/** What the API returns for an uploaded file. */
+// What the API returns for an uploaded file.
 export interface UploadedFileDto {
   id: string;
   url: string;
