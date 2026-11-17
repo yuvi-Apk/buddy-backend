@@ -14,10 +14,12 @@ export function createRoleModule({ prisma, redis }: Infra) {
   const controller = new RoleController(service);
 
   return {
+    service,
     permissionService,
     router: ({ guards }: RouterDeps) => createRoleRouter(controller, guards),
   };
 }
 
 export type RoleModule = ReturnType<typeof createRoleModule>;
+export type { RoleService } from "./role.service.js";
 export type { RoleDto } from "./role.schema.js";

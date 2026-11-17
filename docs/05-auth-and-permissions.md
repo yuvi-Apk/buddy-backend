@@ -31,7 +31,7 @@ Every route must have one of these. `tests/guardrails/route-guards.test.ts` fail
 Permissions are defined **in code**, in `src/config/rbac.config.ts`:
 
 ```ts
-export const PAGES = ["ROLE", "UPLOAD", "ORGANIZATION"] as const;
+export const PAGES = ["ROLE", "UPLOAD", "ORGANIZATION", "ADMIN"] as const;
 export const SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 ```
 
@@ -46,6 +46,20 @@ To protect a new admin feature: add its page to `PAGES`, then use `requirePermis
 routes. `requirePermission` reads the role's pages from Redis (`role-perms:<roleId>`, filled from
 Postgres on a miss). When a role changes, `RoleService` clears that key, so the change applies on
 the admin's very next request.
+
+## Admin accounts
+
+Staff accounts are managed at `/admin/admins` (ADMIN page): list, create (`{ name, email, roleId }`),
+rename, move to another role, disable or re-enable. The new admin signs in with the Google account of
+that email; it is linked on first sign-in. Email can't be changed and accounts are never deleted
+(disable instead), so their history (uploads, invites, created organizations) stays.
+
+- **No privilege escalation:** nobody changes their own account here; only super admins manage
+  super admins or grant `SUPER_ADMIN`; other staff only manage admins, and grant roles, whose pages
+  they have themselves.
+- **Disabling** revokes every session of that admin, so they are out on their next request.
+- **One active super admin always remains:** changes run under an advisory lock and are rolled back
+  (409) if no active `SUPER_ADMIN` would be left, even when two super admins demote each other at once.
 
 ## Organizations (inside the app)
 

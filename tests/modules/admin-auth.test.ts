@@ -203,7 +203,12 @@ describe("GET /admin/auth/me", () => {
 
     const boss = await superAdmin();
     const bossMe = await request(app).get(`${BASE}/me`).set(boss.auth);
-    expect(bossMe.body.data.pages).toEqual(["ROLE", "UPLOAD", "ORGANIZATION"]);
+    expect(bossMe.body.data.pages).toEqual([
+      "ROLE",
+      "UPLOAD",
+      "ORGANIZATION",
+      "ADMIN",
+    ]);
   });
 });
 

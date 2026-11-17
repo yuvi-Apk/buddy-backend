@@ -27,6 +27,11 @@ export class RoleService {
     return PAGES;
   }
 
+  // Null when missing. Used by the admin module when assigning a role.
+  findById(id: string): Promise<RoleDto | null> {
+    return this.roles.findById(id);
+  }
+
   async getById(id: string): Promise<RoleDto> {
     const role = await this.roles.findById(id);
     if (!role) throw ApiError.notFound("Role not found");

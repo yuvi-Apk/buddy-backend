@@ -22,6 +22,7 @@ import {
 import { createRateLimiters } from "./middlewares/rateLimit.middleware.js";
 import { createVerifyUser } from "./middlewares/user/auth.middleware.js";
 import { createRequireOrganizationRole } from "./middlewares/user/organization-role.middleware.js";
+import { createAdminModule } from "./modules/admin/index.js";
 import { createAdminAuthModule } from "./modules/admin-auth/index.js";
 import { createClassroomModule } from "./modules/classroom/index.js";
 import { createInviteModule } from "./modules/invite/index.js";
@@ -97,6 +98,11 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     organizationService: organization.service,
     classroomService: classroom.service,
   });
+  const admin = createAdminModule(infra, {
+    roleService: role.service,
+    permissionService: role.permissionService,
+    sessionService: session.service,
+  });
 
   // Guards
   const guards: Guards = {
@@ -127,6 +133,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       classroom,
       invite,
       joinRequest,
+      admin,
     },
     guards,
     rateLimiters,
