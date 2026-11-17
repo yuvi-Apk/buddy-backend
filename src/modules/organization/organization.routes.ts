@@ -9,8 +9,10 @@ import {
   listMembersQuery,
   listMyOrganizationsQuery,
   listOrganizationsQuery,
+  membershipIdParams,
   organizationIdParams,
   updateJoinCodeBody,
+  updateMemberBody,
   updateMembershipSettingsBody,
   updateOrganizationBody,
   userIdParams,
@@ -156,6 +158,37 @@ export function createOrganizationUserRouter(
     verifyUser,
     organizationAdmin,
     asyncHandler(controller.regenerateOwnJoinCode)
+  );
+
+  router.get(
+    "/current/members",
+    verifyUser,
+    organizationAdmin,
+    validate({ query: listMembersQuery }),
+    asyncHandler(controller.listCurrentMembers)
+  );
+
+  router.patch(
+    "/current/members/:membershipId",
+    verifyUser,
+    organizationAdmin,
+    validate({ params: membershipIdParams, body: updateMemberBody }),
+    asyncHandler(controller.updateMember)
+  );
+
+  router.delete(
+    "/current/members/:membershipId",
+    verifyUser,
+    organizationAdmin,
+    validate({ params: membershipIdParams }),
+    asyncHandler(controller.removeMember)
+  );
+
+  router.post(
+    "/current/leave",
+    verifyUser,
+    anyMember,
+    asyncHandler(controller.leave)
   );
 
   return router;

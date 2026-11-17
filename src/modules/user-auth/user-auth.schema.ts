@@ -6,8 +6,9 @@ export const userGoogleSignInBody = z.strictObject({
 });
 export type UserGoogleSignInBody = z.infer<typeof userGoogleSignInBody>;
 
+// The user panel sends the refresh token as a cookie. A body value is accepted for API clients.
 export const userRefreshBody = z.strictObject({
-  refreshToken: z.string().min(1).max(200),
+  refreshToken: z.string().min(1).max(200).optional(),
 });
 export type UserRefreshBody = z.infer<typeof userRefreshBody>;
 
@@ -20,7 +21,7 @@ export interface AuthenticatedUser {
   examCategory: "GOVERNMENT_EXAM" | "SCHOOL" | "COLLEGE" | "OTHER" | null;
 }
 
-// The app keeps both tokens in the device's secure storage.
+// The controller puts the refresh token in an httpOnly cookie, never in the body.
 export interface UserSignInResult {
   accessToken: string;
   refreshToken: string;

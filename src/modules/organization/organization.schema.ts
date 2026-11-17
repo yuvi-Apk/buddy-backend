@@ -111,6 +111,20 @@ export const updateJoinCodeBody = z.strictObject({
 });
 export type UpdateJoinCodeBody = z.infer<typeof updateJoinCodeBody>;
 
+export const membershipIdParams = z.strictObject({ membershipId: z.uuid() });
+export type MembershipIdParams = z.infer<typeof membershipIdParams>;
+
+// LEFT and REMOVED are set by leaving and removing, never by an edit.
+export const updateMemberBody = z
+  .strictObject({
+    role: z.enum(MEMBERSHIP_ROLES).optional(),
+    status: z.enum(["ACTIVE", "SUSPENDED"]).optional(),
+  })
+  .refine((body) => Object.keys(body).length > 0, {
+    message: "Send at least one field to change",
+  });
+export type UpdateMemberBody = z.infer<typeof updateMemberBody>;
+
 // ===========================================================================
 // What the API returns
 // ===========================================================================

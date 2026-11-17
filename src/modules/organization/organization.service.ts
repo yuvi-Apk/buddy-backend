@@ -19,6 +19,7 @@ import type {
   MembershipSettingsDto,
   MyOrganizationDto,
   OrganizationDto,
+  UpdateMemberBody,
   UpdateOrganizationBody,
 } from "./organization.schema.js";
 
@@ -224,6 +225,48 @@ export class OrganizationService {
     return { joinCode, isJoinCodeEnabled };
   }
 
+  async listCurrentMembers(
+    organizationId: string,
+    query: ListMembersQuery
+  ): Promise<Paginated<MemberDto>> {
+    const { items, total } = await this.organizations.listMembers(
+      organizationId,
+      query
+    );
+    return paginated(items, total, query);
+  }
+
+  async updateMember(
+    actor: ActiveMembership,
+    targetMembershipId: string,
+    change: UpdateMemberBody
+  ): Promise<MemberDto> {
+    const result = await this.changeMember(actor, targetMembershipId, change);
+    if (result === "REMOVED") throw ApiError.notFound("Member not found");
+    return result;
+  }
+
+  async removeMember(
+    actor: ActiveMembership,
+    targetMembershipId: string
+  ): Promise<void> {
+    await this.changeMember(actor, targetMembershipId, "REMOVE");
+  }
+
+  async leave(membership: ActiveMembership): Promise<void> {
+    const result = await this.organizations.leaveOrganization(
+      membership.organizationId,
+      membership.id
+    );
+    if (result === "NOT_FOUND")
+      throw ApiError.notFound("Organization not found");
+    if (result === "LAST_ADMIN") {
+      throw ApiError.conflict(
+        "You are the only organization admin. Make another member an admin first"
+      );
+    }
+  }
+
   // ===========================================================================
   // Used by guards and other modules
   // ===========================================================================
@@ -256,9 +299,48 @@ export class OrganizationService {
     return this.organizations.joinOrganization(input);
   }
 
+  // An ACTIVE membership of this organization, for the classroom module. Null otherwise.
+  async findActiveMember(
+    organizationId: string,
+    membershipId: string
+  ): Promise<{ id: string; role: MembershipRole } | null> {
+    const member = await this.organizations.findSeatHoldingMember(
+      organizationId,
+      membershipId
+    );
+    return member?.status === "ACTIVE"
+      ? { id: member.id, role: member.role }
+      : null;
+  }
+
   // ===========================================================================
   // Internals
   // ===========================================================================
+
+  // Own membership changes go through leave, so an admin can't demote or suspend themselves
+  // into an organization with no admin.
+  private async changeMember(
+    actor: ActiveMembership,
+    targetMembershipId: string,
+    change: UpdateMemberBody | "REMOVE"
+  ): Promise<MemberDto | "REMOVED"> {
+    if (targetMembershipId === actor.id) {
+      throw ApiError.forbidden(
+        "You can't change your own membership. Use leave instead"
+      );
+    }
+    const result = await this.organizations.changeMemberAsOrganizationAdmin({
+      organizationId: actor.organizationId,
+      actorMembershipId: actor.id,
+      targetMembershipId,
+      change,
+    });
+    if (result === "NOT_FOUND") throw ApiError.notFound("Member not found");
+    if (result === "ACTOR_NOT_ADMIN") {
+      throw ApiError.forbidden("Your role in this organization can't do this");
+    }
+    return result;
+  }
 
   private async applyUpdate(
     id: string,

@@ -64,13 +64,29 @@ export const signInUserRequest = (
     .post(USER_GOOGLE_SIGN_IN)
     .send({ idToken: googleIdTokenFor(email, overrides) });
 
-// Signs a user in (one device) and returns the tokens and profile.
+// The value of one cookie from a response's Set-Cookie headers.
+export function cookieValue(
+  res: request.Response,
+  name: string
+): string | undefined {
+  const header = res.headers["set-cookie"] as unknown as string[] | undefined;
+  return header
+    ?.find((value) => value.startsWith(`${name}=`))
+    ?.split(";")[0]
+    ?.split("=")
+    .slice(1)
+    .join("=");
+}
+
+// Signs a user in (one device) and returns the tokens and profile. The refresh token comes
+// from the httpOnly cookie, as the browser would keep it.
 export async function signInUser(email = "student@buddy.test") {
   const res = await signInUserRequest(email);
   const data = res.body.data as {
     accessToken: string;
-    refreshToken: string;
     user: { id: string; email: string };
   };
-  return { ...data, auth: bearer(data.accessToken) };
+  const refreshToken = cookieValue(res, "userRefreshToken");
+  if (!refreshToken) throw new Error("Sign-in set no refresh cookie");
+  return { ...data, refreshToken, auth: bearer(data.accessToken) };
 }

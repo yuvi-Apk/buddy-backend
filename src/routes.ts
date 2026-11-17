@@ -31,6 +31,7 @@ export function createApiRouter(container: Container): Router {
   router.use("/user/auth", modules.userAuth.router(deps));
   router.use("/user/sessions", modules.session.userRouter(deps));
   router.use("/user/organizations", modules.organization.userRouter(deps));
+  router.use("/user/classrooms", modules.classroom.router(deps));
 
   return router;
 }

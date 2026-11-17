@@ -6,7 +6,10 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { adminWith, signInUser, superAdmin } from "../helpers/auth.js";
 import {
   addMembership,
+  addToClassroom,
+  createClassroom,
   createOrganization,
+  createSchoolWithMembers,
   createUser,
 } from "../helpers/fixtures.js";
 import {
@@ -562,6 +565,10 @@ describe("guards on app organization routes", () => {
     ["get", `${CURRENT}/join-code`],
     ["patch", `${CURRENT}/join-code`],
     ["post", `${CURRENT}/join-code/regenerate`],
+    ["get", `${CURRENT}/members`],
+    ["patch", `${CURRENT}/members/${MISSING_ID}`],
+    ["delete", `${CURRENT}/members/${MISSING_ID}`],
+    ["post", `${CURRENT}/leave`],
   ];
 
   it("401 without a token and with an admin token", async () => {
@@ -767,5 +774,279 @@ describe("organization admin: /user/organizations/current/join-code", () => {
       where: { id: otherSchool.id },
     });
     expect(row.joinCode).toBe(otherSchool.joinCode);
+  });
+});
+// ===========================================================================
+// App: member management and leaving
+// ===========================================================================
+
+const membershipOf = (membershipId: string) =>
+  prisma.membership.findUniqueOrThrow({ where: { id: membershipId } });
+
+const countActiveOrganizationAdmins = () =>
+  prisma.membership.count({
+    where: { role: "ORGANIZATION_ADMIN", status: "ACTIVE" },
+  });
+
+describe("GET /user/organizations/current/members", () => {
+  it("403 for a teacher or student", async () => {
+    const { teacher, student } = await createSchoolWithMembers(signInUser);
+    for (const member of [teacher, student]) {
+      const res = await request(app)
+        .get(`${CURRENT}/members`)
+        .set(member.headers);
+      expect(res.status).toBe(403);
+    }
+  });
+
+  it("200 lists this organization's members with pagination", async () => {
+    const { principal } = await createSchoolWithMembers(signInUser);
+    await createSchoolWithMembers(signInUser, "Blue Hills");
+    const res = await request(app)
+      .get(`${CURRENT}/members?limit=2&role=TEACHER`)
+      .set(principal.headers);
+    expect(res.status).toBe(200);
+    expect(res.body.data.meta).toMatchObject({ total: 1, limit: 2 });
+    expect(res.body.data.items[0].role).toBe("TEACHER");
+  });
+
+  it("400 for a page size above 100", async () => {
+    const { principal } = await createSchoolWithMembers(signInUser);
+    const res = await request(app)
+      .get(`${CURRENT}/members?limit=101`)
+      .set(principal.headers);
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("PATCH /user/organizations/current/members/:membershipId", () => {
+  const memberPath = (membershipId: string) =>
+    `${CURRENT}/members/${membershipId}`;
+
+  it("400 for an empty body, LEFT or REMOVED status, unknown fields and a malformed ID", async () => {
+    const { principal, student } = await createSchoolWithMembers(signInUser);
+    const attempts: [string, object][] = [
+      [memberPath(student.membership.id), {}],
+      [memberPath(student.membership.id), { status: "LEFT" }],
+      [memberPath(student.membership.id), { status: "REMOVED" }],
+      [memberPath(student.membership.id), { joinMethod: "ACCEPTED_INVITE" }],
+      [memberPath("not-a-uuid"), { role: "TEACHER" }],
+    ];
+    for (const [path, body] of attempts) {
+      const res = await request(app)
+        .patch(path)
+        .set(principal.headers)
+        .send(body);
+      expect(res.status, `${path} ${JSON.stringify(body)}`).toBe(400);
+    }
+  });
+
+  it("403 for the caller's own membership", async () => {
+    const { principal } = await createSchoolWithMembers(signInUser);
+    const res = await request(app)
+      .patch(memberPath(principal.membership.id))
+      .set(principal.headers)
+      .send({ role: "TEACHER" });
+    expect(res.status).toBe(403);
+    expect((await membershipOf(principal.membership.id)).role).toBe(
+      "ORGANIZATION_ADMIN"
+    );
+  });
+
+  it("404 for a member of another organization, one who left, or a missing one", async () => {
+    const { principal, school } = await createSchoolWithMembers(signInUser);
+    const other = await createSchoolWithMembers(signInUser, "Blue Hills");
+    const formerStudent = await addMembership(
+      school.id,
+      (await createUser()).id,
+      { status: "LEFT" }
+    );
+    for (const membershipId of [
+      other.student.membership.id,
+      formerStudent.id,
+      MISSING_ID,
+    ]) {
+      const res = await request(app)
+        .patch(memberPath(membershipId))
+        .set(principal.headers)
+        .send({ status: "SUSPENDED" });
+      expect(res.status, membershipId).toBe(404);
+    }
+    expect((await membershipOf(other.student.membership.id)).status).toBe(
+      "ACTIVE"
+    );
+  });
+
+  it("200 promotes a teacher and suspends a student, who is then locked out", async () => {
+    const { principal, teacher, student } =
+      await createSchoolWithMembers(signInUser);
+
+    const promoted = await request(app)
+      .patch(memberPath(teacher.membership.id))
+      .set(principal.headers)
+      .send({ role: "ORGANIZATION_ADMIN" });
+    expect(promoted.status).toBe(200);
+    expect(promoted.body.data.role).toBe("ORGANIZATION_ADMIN");
+
+    const suspended = await request(app)
+      .patch(memberPath(student.membership.id))
+      .set(principal.headers)
+      .send({ status: "SUSPENDED" });
+    expect(suspended.status).toBe(200);
+    expect((await request(app).get(CURRENT).set(student.headers)).status).toBe(
+      403
+    );
+  });
+
+  it("two admins demoting each other at once leave one admin", async () => {
+    const { principal, teacher } = await createSchoolWithMembers(signInUser);
+    await prisma.membership.update({
+      where: { id: teacher.membership.id },
+      data: { role: "ORGANIZATION_ADMIN" },
+    });
+
+    const results = await Promise.all([
+      request(app)
+        .patch(memberPath(teacher.membership.id))
+        .set(principal.headers)
+        .send({ role: "STUDENT" }),
+      request(app)
+        .patch(memberPath(principal.membership.id))
+        .set(teacher.headers)
+        .send({ role: "STUDENT" }),
+    ]);
+    expect(results.map((res) => res.status).sort()).toEqual([200, 403]);
+    expect(await countActiveOrganizationAdmins()).toBe(1);
+  });
+});
+
+describe("DELETE /user/organizations/current/members/:membershipId", () => {
+  it("403 for the caller's own membership and for a non-admin", async () => {
+    const { principal, teacher, student } =
+      await createSchoolWithMembers(signInUser);
+    const own = await request(app)
+      .delete(`${CURRENT}/members/${principal.membership.id}`)
+      .set(principal.headers);
+    expect(own.status).toBe(403);
+    const byTeacher = await request(app)
+      .delete(`${CURRENT}/members/${student.membership.id}`)
+      .set(teacher.headers);
+    expect(byTeacher.status).toBe(403);
+  });
+
+  it("404 for a member of another organization", async () => {
+    const { principal } = await createSchoolWithMembers(signInUser);
+    const other = await createSchoolWithMembers(signInUser, "Blue Hills");
+    const res = await request(app)
+      .delete(`${CURRENT}/members/${other.student.membership.id}`)
+      .set(principal.headers);
+    expect(res.status).toBe(404);
+    expect((await membershipOf(other.student.membership.id)).status).toBe(
+      "ACTIVE"
+    );
+  });
+
+  it("200 removes the member: seat freed, out of every classroom, locked out, and only once", async () => {
+    const { school, principal, student } =
+      await createSchoolWithMembers(signInUser);
+    const classroom = await createClassroom(school.id);
+    await addToClassroom(classroom, student.membership.id);
+
+    const res = await request(app)
+      .delete(`${CURRENT}/members/${student.membership.id}`)
+      .set(principal.headers);
+    expect(res.status).toBe(200);
+    expect(await membershipOf(student.membership.id)).toMatchObject({
+      status: "REMOVED",
+      leftAt: expect.any(Date),
+    });
+    expect(await counters(school.id, student.user.id)).toEqual({
+      activeMemberCount: 2,
+      activeMembershipCount: 0,
+    });
+    expect(await prisma.classroomMember.count()).toBe(0);
+    expect((await request(app).get(CURRENT).set(student.headers)).status).toBe(
+      404
+    );
+
+    const again = await request(app)
+      .delete(`${CURRENT}/members/${student.membership.id}`)
+      .set(principal.headers);
+    expect(again.status).toBe(404);
+    expect((await counters(school.id, student.user.id)).activeMemberCount).toBe(
+      2
+    );
+  });
+});
+
+describe("POST /user/organizations/current/leave", () => {
+  it("409 for the only active organization admin", async () => {
+    const { principal, school } = await createSchoolWithMembers(signInUser);
+    const res = await request(app)
+      .post(`${CURRENT}/leave`)
+      .set(principal.headers);
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/only organization admin/);
+    expect(
+      (await counters(school.id, principal.user.id)).activeMemberCount
+    ).toBe(3);
+  });
+
+  it("200 a student leaves: seat freed, out of classrooms, and free to join another organization", async () => {
+    const { school, student } = await createSchoolWithMembers(signInUser);
+    const classroom = await createClassroom(school.id);
+    await addToClassroom(classroom, student.membership.id);
+
+    const res = await request(app)
+      .post(`${CURRENT}/leave`)
+      .set(student.headers);
+    expect(res.status).toBe(200);
+    expect((await membershipOf(student.membership.id)).status).toBe("LEFT");
+    expect(await counters(school.id, student.user.id)).toEqual({
+      activeMemberCount: 2,
+      activeMembershipCount: 0,
+    });
+    expect(await prisma.classroomMember.count()).toBe(0);
+    expect((await request(app).get(CURRENT).set(student.headers)).status).toBe(
+      404
+    );
+
+    const { auth } = await superAdmin();
+    const otherSchool = await createOrganization();
+    const studentRow = await prisma.user.findUniqueOrThrow({
+      where: { id: student.user.id },
+    });
+    const joined = await request(app)
+      .post(`${ORGANIZATIONS}/${otherSchool.id}/admins`)
+      .set(auth)
+      .send({ email: studentRow.email });
+    expect(joined.status).toBe(201);
+  });
+
+  it("200 an admin leaves while another admin stays", async () => {
+    const { principal, teacher } = await createSchoolWithMembers(signInUser);
+    await prisma.membership.update({
+      where: { id: teacher.membership.id },
+      data: { role: "ORGANIZATION_ADMIN" },
+    });
+    const res = await request(app)
+      .post(`${CURRENT}/leave`)
+      .set(principal.headers);
+    expect(res.status).toBe(200);
+  });
+
+  it("two admins leaving at once: one leaves, one stays", async () => {
+    const { principal, teacher } = await createSchoolWithMembers(signInUser);
+    await prisma.membership.update({
+      where: { id: teacher.membership.id },
+      data: { role: "ORGANIZATION_ADMIN" },
+    });
+    const results = await Promise.all(
+      [principal, teacher].map((admin) =>
+        request(app).post(`${CURRENT}/leave`).set(admin.headers)
+      )
+    );
+    expect(results.map((res) => res.status).sort()).toEqual([200, 409]);
+    expect(await countActiveOrganizationAdmins()).toBe(1);
   });
 });

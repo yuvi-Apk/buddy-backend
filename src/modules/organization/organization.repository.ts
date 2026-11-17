@@ -78,6 +78,56 @@ class JoinRefusedError extends Error {
 const isUniqueViolation = (err: unknown) =>
   err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 
+type TransactionClient = Prisma.TransactionClient;
+
+// Serialises every change that could take away an organization's last ACTIVE admin.
+async function lockOrganizationAdmins(
+  tx: TransactionClient,
+  organizationId: string
+): Promise<void> {
+  const lockKey = `organization-admins:${organizationId}`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+}
+
+// Sets a seat-holding membership to LEFT or REMOVED, frees the seat on both counters and
+// takes the member out of every classroom. Conditional, so a seat is never freed twice.
+async function endMembership(
+  tx: TransactionClient,
+  organizationId: string,
+  membershipId: string,
+  status: "LEFT" | "REMOVED"
+): Promise<boolean> {
+  const membership = await tx.membership.findFirst({
+    where: { id: membershipId, organizationId },
+    select: { userId: true },
+  });
+  if (!membership) return false;
+
+  const { count } = await tx.membership.updateMany({
+    where: {
+      id: membershipId,
+      organizationId,
+      status: { in: SEAT_HOLDING_STATUSES },
+    },
+    data: { status, leftAt: new Date() },
+  });
+  if (count === 0) return false;
+
+  await tx.user.updateMany({
+    where: { id: membership.userId, activeMembershipCount: { gt: 0 } },
+    data: { activeMembershipCount: { decrement: 1 } },
+  });
+  await tx.organization.updateMany({
+    where: { id: organizationId, activeMemberCount: { gt: 0 } },
+    data: { activeMemberCount: { decrement: 1 } },
+  });
+  // Classroom places end with the membership; rejoining starts with no classrooms.
+  await tx.classroomMember.deleteMany({
+    where: { membershipId, organizationId },
+  });
+  return true;
+}
+
 export class OrganizationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -368,6 +418,119 @@ export class OrganizationRepository {
       data: { role: "ORGANIZATION_ADMIN" },
     });
     return count === 1;
+  }
+
+  // A seat-holding membership by id, for other modules (classroom).
+  findSeatHoldingMember(
+    organizationId: string,
+    membershipId: string
+  ): Promise<{
+    id: string;
+    role: MembershipRole;
+    status: MembershipStatus;
+  } | null> {
+    return this.prisma.membership.findFirst({
+      where: {
+        id: membershipId,
+        organizationId,
+        status: { in: SEAT_HOLDING_STATUSES },
+      },
+      select: { id: true, role: true, status: true },
+    });
+  }
+
+  // An organization admin changes, suspends or removes another member. Runs under the
+  // organization's admin lock, and first checks the actor is still an ACTIVE organization
+  // admin: two admins demoting each other at once can't leave the organization without one.
+  async changeMemberAsOrganizationAdmin(input: {
+    organizationId: string;
+    actorMembershipId: string;
+    targetMembershipId: string;
+    change:
+      { role?: MembershipRole; status?: "ACTIVE" | "SUSPENDED" } | "REMOVE";
+  }): Promise<MemberDto | "REMOVED" | "NOT_FOUND" | "ACTOR_NOT_ADMIN"> {
+    const { organizationId, targetMembershipId, change } = input;
+    return this.prisma.$transaction(async (tx) => {
+      await lockOrganizationAdmins(tx, organizationId);
+
+      const actor = await tx.membership.findFirst({
+        where: {
+          id: input.actorMembershipId,
+          organizationId,
+          role: "ORGANIZATION_ADMIN",
+          status: "ACTIVE",
+        },
+        select: { id: true },
+      });
+      if (!actor) return "ACTOR_NOT_ADMIN";
+
+      if (change === "REMOVE") {
+        const ended = await endMembership(
+          tx,
+          organizationId,
+          targetMembershipId,
+          "REMOVED"
+        );
+        return ended ? "REMOVED" : "NOT_FOUND";
+      }
+
+      const { count } = await tx.membership.updateMany({
+        where: {
+          id: targetMembershipId,
+          organizationId,
+          status: { in: SEAT_HOLDING_STATUSES },
+        },
+        data: change,
+      });
+      if (count === 0) return "NOT_FOUND";
+      return tx.membership.findUniqueOrThrow({
+        where: { id: targetMembershipId },
+        select: memberSelect,
+      });
+    });
+  }
+
+  // The caller leaves. The last ACTIVE organization admin can't, so an organization always keeps one.
+  async leaveOrganization(
+    organizationId: string,
+    membershipId: string
+  ): Promise<"LEFT" | "NOT_FOUND" | "LAST_ADMIN"> {
+    return this.prisma.$transaction(async (tx) => {
+      await lockOrganizationAdmins(tx, organizationId);
+
+      const membership = await tx.membership.findFirst({
+        where: {
+          id: membershipId,
+          organizationId,
+          status: { in: SEAT_HOLDING_STATUSES },
+        },
+        select: { role: true, status: true },
+      });
+      if (!membership) return "NOT_FOUND";
+
+      if (
+        membership.role === "ORGANIZATION_ADMIN" &&
+        membership.status === "ACTIVE"
+      ) {
+        const otherActiveAdmins = await tx.membership.count({
+          where: {
+            organizationId,
+            id: { not: membershipId },
+            role: "ORGANIZATION_ADMIN",
+            status: "ACTIVE",
+          },
+        });
+        if (otherActiveAdmins === 0) return "LAST_ADMIN";
+      }
+
+      const ended = await endMembership(
+        tx,
+        organizationId,
+        membershipId,
+        "LEFT"
+      );
+      return ended ? "LEFT" : "NOT_FOUND";
+    });
   }
 
   // ===========================================================================

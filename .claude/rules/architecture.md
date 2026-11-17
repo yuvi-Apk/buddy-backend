@@ -49,13 +49,12 @@ Shared types for wiring live in `src/types/module.types.ts`: `Infra` (prisma, re
 
 ## Modules
 
-Built: `admin-auth`, `user-auth`, `session`, `role`, `upload`, `organization`.
+Built: `admin-auth`, `user-auth`, `session`, `role`, `upload`, `organization`, `classroom`.
 
 Reserved (create with the `new-module` skill when needed):
 
 | Module             | Purpose                                                         |
 | ------------------ | --------------------------------------------------------------- |
-| `classroom`        | Classes and sections inside a school                            |
 | `student`          | Student profile, enrolment in a section                         |
 | `book`             | Book upload; chunking and embedding run in a job                |
 | `assessment`       | Questions, attempts, scores                                     |

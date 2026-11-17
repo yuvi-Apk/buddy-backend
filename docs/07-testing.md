@@ -111,16 +111,16 @@ describe("POST /admin/roles", () => {
 
 ## Helpers
 
-| Helper                                    | Gives you                                                                           |
-| ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| `adminWith(["ROLE"], email?)`             | An admin whose role has those pages, signed in: `{ admin, role, token, auth }`      |
-| `superAdmin()`                            | A signed-in SUPER_ADMIN: `{ admin, role, token, auth }`                             |
-| `signInUser(email?)`                      | A signed-in app user (one more device): `{ user, accessToken, refreshToken, auth }` |
-| `signInAdmin(email, overrides?)`          | The raw sign-in response, to inspect cookies                                        |
-| `bearer(token)`                           | `{ Authorization: "Bearer ..." }` for `.set(...)`                                   |
-| `createRole`, `createAdmin`, `createUser` | Rows straight in the database, without signing in                                   |
-| `googleIdTokenFor(email, overrides?)`     | A fake Google ID token for that email                                               |
-| `MISSING_ID`                              | A valid UUID that matches nothing                                                   |
+| Helper                                    | Gives you                                                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `adminWith(["ROLE"], email?)`             | An admin whose role has those pages, signed in: `{ admin, role, token, auth }`                                           |
+| `superAdmin()`                            | A signed-in SUPER_ADMIN: `{ admin, role, token, auth }`                                                                  |
+| `signInUser(email?)`                      | A signed-in app user (one more device): `{ user, accessToken, refreshToken, auth }` (refresh token read from the cookie) |
+| `signInAdmin(email, overrides?)`          | The raw sign-in response, to inspect cookies                                                                             |
+| `bearer(token)`                           | `{ Authorization: "Bearer ..." }` for `.set(...)`                                                                        |
+| `createRole`, `createAdmin`, `createUser` | Rows straight in the database, without signing in                                                                        |
+| `googleIdTokenFor(email, overrides?)`     | A fake Google ID token for that email                                                                                    |
+| `MISSING_ID`                              | A valid UUID that matches nothing                                                                                        |
 
 Wrote the code by hand and want Claude to write the tests? Ask "write tests for the `<feature>`
 module" (or for one endpoint). The `write-tests` skill reads the routes, schema and service, shows

@@ -111,3 +111,58 @@ export async function addMembership(
     });
   });
 }
+
+export async function createClassroom(
+  organizationId: string,
+  options: { name?: string; isArchived?: boolean } = {}
+) {
+  return prisma.classroom.create({
+    data: {
+      organizationId,
+      name: options.name ?? `Class ${unique()}`,
+      isArchived: options.isArchived ?? false,
+    },
+  });
+}
+
+export async function addToClassroom(
+  classroom: { id: string; organizationId: string },
+  membershipId: string
+) {
+  return prisma.classroomMember.create({
+    data: {
+      classroomId: classroom.id,
+      organizationId: classroom.organizationId,
+      membershipId,
+    },
+  });
+}
+
+// An organization with a signed-in organization admin, teacher and student.
+export async function createSchoolWithMembers(
+  signIn: (email: string) => Promise<{
+    user: { id: string };
+    auth: Record<string, string>;
+  }>,
+  name = "Green Valley"
+) {
+  const school = await createOrganization({ name });
+  const prefix = school.id.slice(-6);
+  const join = async (role: "ORGANIZATION_ADMIN" | "TEACHER" | "STUDENT") => {
+    const signedIn = await signIn(`${role.toLowerCase()}-${prefix}@buddy.test`);
+    const membership = await addMembership(school.id, signedIn.user.id, {
+      role,
+    });
+    return {
+      ...signedIn,
+      membership,
+      headers: { ...signedIn.auth, "X-Organization-Id": school.id },
+    };
+  };
+  return {
+    school,
+    principal: await join("ORGANIZATION_ADMIN"),
+    teacher: await join("TEACHER"),
+    student: await join("STUDENT"),
+  };
+}

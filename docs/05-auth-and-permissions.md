@@ -85,17 +85,29 @@ through `OrganizationService.addMember`, one transaction with two conditional up
 
 Any refusal rolls all three back and answers 409. CHECK constraints in the database back up both limits.
 
+**Leaving and removal** (`POST /user/organizations/current/leave`, or an organization admin's
+`DELETE /user/organizations/current/members/:membershipId`) set the membership to `LEFT` / `REMOVED`,
+free the seat on both counters and take the member out of every classroom, in one transaction.
+An organization always keeps one ACTIVE organization admin: the last one can't leave, nobody can
+change their own membership, and every change that could remove an admin runs under a per-organization
+advisory lock, so two admins demoting each other at once can't both succeed.
+
+**Classrooms** (`/user/classrooms`): organization admins create, archive and fill them and see them
+all; teachers and students see only the classrooms they are in. A classroom of another
+organization, or one the caller isn't in, answers 404.
+
 ## Sessions and tokens
 
 Each sign-in creates a row in the `sessions` table and returns two tokens:
 
-| Token         | Lifetime                        | Where it travels                                                                     |
-| ------------- | ------------------------------- | ------------------------------------------------------------------------------------ |
-| Access token  | `ACCESS_TOKEN_TTL_MINUTES` (15) | Admin: `accessToken` cookie or `Authorization: Bearer`. App: `Authorization: Bearer` |
-| Refresh token | `REFRESH_TOKEN_TTL_DAYS` (30)   | Admin: `refreshToken` cookie, sent only to `/api/v1/admin/auth`. App: response body  |
+| Token         | Lifetime                        | Where it travels                                                                                                        |
+| ------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Access token  | `ACCESS_TOKEN_TTL_MINUTES` (15) | Admin: `accessToken` cookie or `Authorization: Bearer`. App: `Authorization: Bearer`                                    |
+| Refresh token | `REFRESH_TOKEN_TTL_DAYS` (30)   | Admin: `refreshToken` cookie, only to `/api/v1/admin/auth`. App: `userRefreshToken` cookie, only to `/api/v1/user/auth` |
 
-- Cookies are `httpOnly` and `SameSite=Strict`, and `Secure` in production. The admin refresh token
-  never appears in a response body.
+- Cookies are `httpOnly` and `SameSite=Strict`, and `Secure` in production. A refresh token
+  never appears in a response body. `/refresh` also accepts `{ refreshToken }` in the body, for API
+  clients.
 - Only a SHA-256 hash of the refresh token is stored.
 - **Rotation:** every refresh returns a new refresh token, and the old one stops working. If an old
   one is used again (a sign it was stolen), the whole session is revoked.

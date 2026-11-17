@@ -8,8 +8,10 @@ import type {
   ListMembersQuery,
   ListMyOrganizationsQuery,
   ListOrganizationsQuery,
+  MembershipIdParams,
   OrganizationIdParams,
   UpdateJoinCodeBody,
+  UpdateMemberBody,
   UpdateMembershipSettingsBody,
   UpdateOrganizationBody,
   UserIdParams,
@@ -130,6 +132,42 @@ export class OrganizationController {
       this.membership(req).organizationId
     );
     res.status(200).json(new ApiResponse(200, data, "Join code changed"));
+  };
+
+  listCurrentMembers = async (req: Request, res: Response) => {
+    const query = req.validated.query as ListMembersQuery;
+    const data = await this.organizationService.listCurrentMembers(
+      this.membership(req).organizationId,
+      query
+    );
+    res.status(200).json(new ApiResponse(200, data, "Members fetched"));
+  };
+
+  updateMember = async (req: Request, res: Response) => {
+    const { membershipId } = req.validated.params as MembershipIdParams;
+    const change = req.validated.body as UpdateMemberBody;
+    const data = await this.organizationService.updateMember(
+      this.membership(req),
+      membershipId,
+      change
+    );
+    res.status(200).json(new ApiResponse(200, data, "Member updated"));
+  };
+
+  removeMember = async (req: Request, res: Response) => {
+    const { membershipId } = req.validated.params as MembershipIdParams;
+    await this.organizationService.removeMember(
+      this.membership(req),
+      membershipId
+    );
+    res.status(200).json(new ApiResponse(200, null, "Member removed"));
+  };
+
+  leave = async (req: Request, res: Response) => {
+    await this.organizationService.leave(this.membership(req));
+    res
+      .status(200)
+      .json(new ApiResponse(200, null, "You left the organization"));
   };
 
   // ===========================================================================

@@ -1,4 +1,5 @@
 // Public entry point of the user-auth module. Other code imports from here only.
+import { env } from "../../config/env.js";
 import type { GoogleTokenVerifier } from "../../core/security/GoogleIdTokenVerifier.js";
 import type { TokenService } from "../../core/security/TokenService.js";
 import type { Infra, RouterDeps } from "../../types/module.types.js";
@@ -23,7 +24,9 @@ export function createUserAuthModule(
     deps.tokenService,
     deps.googleTokenVerifier
   );
-  const controller = new UserAuthController(service);
+  const controller = new UserAuthController(service, {
+    secure: env.NODE_ENV === "production",
+  });
 
   return {
     service,
