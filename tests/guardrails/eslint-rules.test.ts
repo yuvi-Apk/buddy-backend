@@ -17,15 +17,15 @@ async function ruleIdsFor(filePath: string, code: string): Promise<string[]> {
 describe("ESLint guardrails", () => {
   it("blocks a controller importing Prisma", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/demo.controller.ts",
-      'import { prisma } from "../../config/prisma.js";\nexport const x = prisma;\n'
+      "src/modules/admin-panel/demo/demo.controller.ts",
+      'import { prisma } from "../../../config/prisma.js";\nexport const x = prisma;\n'
     );
     expect(ids).toContain("no-restricted-imports");
   });
 
   it("blocks a controller importing a repository", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/demo.controller.ts",
+      "src/modules/admin-panel/demo/demo.controller.ts",
       'import { DemoRepository } from "./demo.repository.js";\nexport const x = DemoRepository;\n'
     );
     expect(ids).toContain("no-restricted-imports");
@@ -41,19 +41,20 @@ describe("ESLint guardrails", () => {
 
   it("blocks a service importing another module's repository", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/demo.service.ts",
+      "src/modules/admin-panel/demo/demo.service.ts",
       'import { RoleRepository } from "../role/role.repository.js";\nexport const x = RoleRepository;\n'
     );
     expect(ids).toContain("no-restricted-imports");
   });
 
-  it("blocks a module importing another module's files directly", async () => {
+  it("blocks a module importing another module's files directly, in the same panel or another", async () => {
     for (const path of [
-      "../session/session.service.js",
-      "../session/session.schema.js",
+      "../role/role.service.js",
+      "../../shared/session/session.service.js",
+      "../../shared/session/session.schema.js",
     ]) {
       const ids = await ruleIdsFor(
-        "src/modules/demo/demo.service.ts",
+        "src/modules/admin-panel/demo/demo.service.ts",
         `import type { X } from "${path}";\nexport type Y = X;\n`
       );
       expect(ids, path).toContain("no-restricted-imports");
@@ -61,11 +62,13 @@ describe("ESLint guardrails", () => {
   });
 
   it("allows a module importing another module through its index.js", async () => {
-    const ids = await ruleIdsFor(
-      "src/modules/demo/demo.service.ts",
-      'import type { SessionService } from "../session/index.js";\nexport type Y = SessionService;\n'
-    );
-    expect(ids).not.toContain("no-restricted-imports");
+    for (const path of ["../role/index.js", "../../shared/session/index.js"]) {
+      const ids = await ruleIdsFor(
+        "src/modules/admin-panel/demo/demo.service.ts",
+        `import type { X } from "${path}";\nexport type Y = X;\n`
+      );
+      expect(ids, path).not.toContain("no-restricted-imports");
+    }
   });
 
   it("blocks code outside modules from reaching past a module's index.js", async () => {
@@ -76,13 +79,13 @@ describe("ESLint guardrails", () => {
     ]) {
       const ids = await ruleIdsFor(
         filePath,
-        'import { RoleService } from "./modules/role/role.service.js";\nexport const x = RoleService;\n'
+        'import { RoleService } from "./modules/admin-panel/role/role.service.js";\nexport const x = RoleService;\n'
       );
       expect(ids, filePath).toContain("no-restricted-imports");
 
       const viaIndex = await ruleIdsFor(
         filePath,
-        'import { createRoleModule } from "./modules/role/index.js";\nexport const x = createRoleModule;\n'
+        'import { createRoleModule } from "./modules/admin-panel/role/index.js";\nexport const x = createRoleModule;\n'
       );
       expect(viaIndex, filePath).not.toContain("no-restricted-imports");
     }
@@ -90,7 +93,7 @@ describe("ESLint guardrails", () => {
 
   it("allows a module's index.ts to build its own repository", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/index.ts",
+      "src/modules/admin-panel/demo/index.ts",
       'import { DemoRepository } from "./demo.repository.js";\nexport const x = DemoRepository;\n'
     );
     expect(ids).not.toContain("no-restricted-imports");
@@ -98,7 +101,7 @@ describe("ESLint guardrails", () => {
 
   it("allows a service importing its own repository", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/demo.service.ts",
+      "src/modules/admin-panel/demo/demo.service.ts",
       'import { DemoRepository } from "./demo.repository.js";\nexport const x = DemoRepository;\n'
     );
     expect(ids).not.toContain("no-restricted-imports");
@@ -106,15 +109,15 @@ describe("ESLint guardrails", () => {
 
   it("allows a repository importing Prisma", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/demo.repository.ts",
-      'import { prisma } from "../../config/prisma.js";\nexport const x = prisma;\n'
+      "src/modules/admin-panel/demo/demo.repository.ts",
+      'import { prisma } from "../../../config/prisma.js";\nexport const x = prisma;\n'
     );
     expect(ids).not.toContain("no-restricted-imports");
   });
 
   it("blocks process.env outside src/config/env.ts", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/demo.service.ts",
+      "src/modules/admin-panel/demo/demo.service.ts",
       "export const secret = process.env.SECRET;\n"
     );
     expect(ids).toContain("no-restricted-properties");
@@ -130,7 +133,7 @@ describe("ESLint guardrails", () => {
 
   it("blocks unsafe raw SQL and console.log", async () => {
     const ids = await ruleIdsFor(
-      "src/modules/demo/demo.repository.ts",
+      "src/modules/admin-panel/demo/demo.repository.ts",
       'declare const db: { $queryRawUnsafe(q: string): unknown };\nexport const rows = db.$queryRawUnsafe("select 1");\nconsole.log(rows);\n'
     );
     expect(ids).toContain("no-restricted-syntax");

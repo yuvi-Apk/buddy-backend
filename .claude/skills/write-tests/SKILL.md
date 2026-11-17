@@ -9,13 +9,13 @@ Use this when the code already exists and the tests don't. It only adds tests. I
 under `src/` to make a test pass. When a test shows a bug, stop and report it to the user.
 
 The test rules are in `.claude/rules/testing.md`, and the full guide for people is `docs/07-testing.md`.
-Use `tests/modules/role.test.ts` as the model to copy.
+Use `tests/modules/admin-panel/role.test.ts` as the model to copy.
 
 ## 1. Find the target
 
 - **The user named a module or an endpoint:** use that.
 - **The user gave nothing:** run `git status` and `git diff --name-only main...HEAD`. Take every
-  module under `src/modules/<feature>/` that changed, and tell the user which ones you picked.
+  module under `src/modules/<panel>/<feature>/` that changed, and tell the user which ones you picked.
 
 ## 2. List the endpoints
 
@@ -23,7 +23,8 @@ For each module:
 
 1. Read `src/routes.ts` to find the mount path, for example
    `router.use("/admin/roles", ...)` → `/api/v1/admin/roles`.
-2. Read `<feature>.routes.ts`. For each route, note:
+2. Read `<feature>.routes.ts` (in a `shared/` module, both `<feature>.admin.routes.ts` and
+   `<feature>.user.routes.ts`). For each route, note:
    - method and full path
    - guard: `verifyAdmin` + `requirePermission("<PAGE>")`, `ownAccountRoute()`, `verifyUser`, or `publicRoute()`
    - the `validate({ body, query, params })` schemas
@@ -34,7 +35,9 @@ For each module:
 
 ## 3. Compare with the existing tests
 
-Open `tests/modules/<feature>.test.ts`, or create it if it doesn't exist. List the `describe("<METHOD> <path>")`
+Open `tests/modules/<panel>/<feature>.test.ts` (the same panel folder as the module:
+`admin-panel/`, `user-panel/` or `shared/`), or create it if it doesn't exist. Helpers are
+imported from `../../helpers/`. List the `describe("<METHOD> <path>")`
 blocks already in it. Then show the user a short table:
 
 | Endpoint | Has tests | Missing cases |
@@ -110,7 +113,7 @@ for (const body of [{ name: "x" }, { name: "OK", extra: true }]) {
 
 ## 5. Run and hand over
 
-1. Run `pnpm test tests/modules/<feature>.test.ts`, then `pnpm lint`, `pnpm typecheck` and `pnpm test`.
+1. Run `pnpm test tests/modules/<panel>/<feature>.test.ts`, then `pnpm lint`, `pnpm typecheck` and `pnpm test`.
 2. If a test fails:
    - **The test is wrong:** fix the test.
    - **The code is wrong** (for example, there is no ownership check, a hash comes back, or a 500

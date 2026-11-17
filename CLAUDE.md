@@ -13,14 +13,14 @@ matching files (architecture, modules, database, testing, env, ai). Developer gu
 | Start Postgres and Redis | `docker compose up -d`                               |
 | Dev server               | `pnpm dev`                                           |
 | Lint / types / tests     | `pnpm lint` / `pnpm typecheck` / `pnpm test`         |
-| One test file            | `pnpm test tests/modules/role.test.ts`               |
+| One test file            | `pnpm test tests/modules/admin-panel/role.test.ts`   |
 | New migration            | `pnpm exec prisma migrate dev --name <what_changed>` |
 
 ## Building
 
 - New feature folder: use the `new-module` skill. New endpoint in an existing module: use `add-endpoint`.
   Tests for code that already exists (for example written by hand): use `write-tests`.
-- A module is six files (`routes`, `controller`, `service`, `repository`, `schema`, `index.ts`). Copy `src/modules/role/`.
+- A module is six files (`routes`, `controller`, `service`, `repository`, `schema`, `index.ts`). Copy `src/modules/admin-panel/role/`.
 - Names say what a thing holds or does. Comments: `//` only, short, for _why_ not _what_; major
   sections get a `// ====` banner. Details in `.claude/rules/naming.md`.
 

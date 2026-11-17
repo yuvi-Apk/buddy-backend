@@ -22,16 +22,16 @@ import {
 import { createRateLimiters } from "./middlewares/rateLimit.middleware.js";
 import { createVerifyUser } from "./middlewares/user/auth.middleware.js";
 import { createRequireOrganizationRole } from "./middlewares/user/organization-role.middleware.js";
-import { createAdminModule } from "./modules/admin/index.js";
-import { createAdminAuthModule } from "./modules/admin-auth/index.js";
-import { createClassroomModule } from "./modules/classroom/index.js";
-import { createInviteModule } from "./modules/invite/index.js";
-import { createJoinRequestModule } from "./modules/join-request/index.js";
-import { createOrganizationModule } from "./modules/organization/index.js";
-import { createRoleModule } from "./modules/role/index.js";
-import { createSessionModule } from "./modules/session/index.js";
-import { createUploadModule } from "./modules/upload/index.js";
-import { createUserAuthModule } from "./modules/user-auth/index.js";
+import { createAdminAccountModule } from "./modules/admin-panel/admin-account/index.js";
+import { createAdminAuthModule } from "./modules/admin-panel/admin-auth/index.js";
+import { createClassroomModule } from "./modules/user-panel/classroom/index.js";
+import { createInviteModule } from "./modules/shared/invite/index.js";
+import { createJoinRequestModule } from "./modules/user-panel/join-request/index.js";
+import { createOrganizationModule } from "./modules/shared/organization/index.js";
+import { createRoleModule } from "./modules/admin-panel/role/index.js";
+import { createSessionModule } from "./modules/shared/session/index.js";
+import { createUploadModule } from "./modules/admin-panel/upload/index.js";
+import { createUserAuthModule } from "./modules/user-panel/user-auth/index.js";
 import type { Guards, Infra } from "./types/module.types.js";
 
 // What GET /health/ready checks. Each check throws when its dependency is down.
@@ -98,7 +98,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     organizationService: organization.service,
     classroomService: classroom.service,
   });
-  const admin = createAdminModule(infra, {
+  const adminAccount = createAdminAccountModule(infra, {
     roleService: role.service,
     permissionService: role.permissionService,
     sessionService: session.service,
@@ -133,7 +133,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       classroom,
       invite,
       joinRequest,
-      admin,
+      adminAccount,
     },
     guards,
     rateLimiters,

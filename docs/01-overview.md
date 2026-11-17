@@ -15,7 +15,7 @@ always moves through the same layers, and each layer has one job:
 | Service    | The rules: ownership, "is this allowed?", transactions    | Read `req`/`res`, send a reply |
 | Repository | Database queries                                          | Rules, HTTP                    |
 
-Because every module looks the same, once you know `src/modules/role/` you know them all.
+Because every module looks the same, once you know `src/modules/admin-panel/role/` you know them all.
 
 ## Folder map
 
@@ -32,10 +32,13 @@ src/
   middlewares/       guards (verifyAdmin, verifyUser, requirePermission, requireOrganizationRole), validate, rate limit, upload
   core/              shared infrastructure with no business rules: Google sign-in, tokens,
                      permission cache, file storage, health check. AI clients will live in core/ai.
-  modules/           one folder per feature
+  modules/           one folder per feature, grouped by panel:
+    admin-panel/     super admin panel only (admin-account, admin-auth, role, upload)
+    user-panel/      user panel only (user-auth, classroom, join-request)
+    shared/          both panels (session, organization, invite)
   generated/prisma/  generated database client (never edit, git-ignored)
 prisma/              schema.prisma, migrations/, seed.ts
-tests/               helpers/, guardrails/, platform/, modules/
+tests/               helpers/, guardrails/, platform/, modules/<panel>/ (same panels as src/modules)
 docs/                these guides
 .claude/             rules, skills and hooks for Claude Code
 ```
@@ -88,7 +91,7 @@ Take `PATCH /api/v1/admin/roles/:id` (change a role) as the example.
 There is no dependency-injection library. Classes receive what they need through their constructor,
 and three files put them together:
 
-- **`src/modules/<feature>/index.ts`** builds one module: repository → service → controller. It
+- **`src/modules/<panel>/<feature>/index.ts`** builds one module: repository → service → controller. It
   returns what other code needs (for example the service) and a `router(deps)` function.
 - **`src/container.ts`** creates the shared pieces once (`infra` = Prisma, Redis, logger; the token
   service; rate limiters; storage) and then each module in one line:

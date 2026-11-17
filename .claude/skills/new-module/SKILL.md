@@ -5,20 +5,27 @@ description: Create a new feature module in the Buddy backend (the six files, wi
 
 # New module
 
-Every feature lives in `src/modules/<feature>/` and has exactly six files: the five layers plus
-`index.ts`, which builds the module and is the only file other code may import. Copy the shape of
-`src/modules/role/` (admin CRUD with a page permission). For a module the mobile app calls,
-look at `src/modules/user-auth/` for the `verifyUser` guard.
+Every feature lives in `src/modules/<panel>/<feature>/`, where `<panel>` is who calls it:
+
+| Panel folder   | Used by                | Files                                                                                                                                                                  | Copy                                |
+| -------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `admin-panel/` | super admin panel only | six: schema, repository, service, controller, routes, `index.ts`                                                                                                       | `src/modules/admin-panel/role/`     |
+| `user-panel/`  | user panel (app) only  | six, as above                                                                                                                                                          | `src/modules/user-panel/classroom/` |
+| `shared/`      | both panels            | schema, repository, service, `index.ts`, plus `<feature>.admin.controller.ts`, `<feature>.admin.routes.ts`, `<feature>.user.controller.ts`, `<feature>.user.routes.ts` | `src/modules/shared/invite/`        |
+
+`index.ts` builds the module and is the only file other code may import.
 
 Use kebab-case for the folder and file names (`learning-path`), PascalCase for classes
 (`LearningPathService`), and the singular form (`role`, not `roles`).
 
 ## Before writing code
 
-1. Read `.claude/rules/modules.md`, `.claude/rules/naming.md` and the six files in `src/modules/role/`. The full guide for
+1. Read `.claude/rules/modules.md`, `.claude/rules/naming.md` and the six files in `src/modules/admin-panel/role/`. The full guide for
    people is `docs/03-create-a-module.md`.
 2. Decide: who calls it (admin panel, app, or both), which table(s) it owns, and whether the
    rows belong to someone (a school, a user). If they do, plan the ownership check now.
+3. Pick the panel folder from who calls it (table above) and tell the user which one. If only one
+   panel needs it today, use that panel; it moves to `shared/` the day the other panel needs it.
 
 ## Steps, in this order
 
@@ -38,7 +45,11 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
    else's record. To use another module, inject its **service**, never its repository.
 5. **`<feature>.controller.ts`**: a class whose methods are arrow properties. Read input only
    from `req.validated`, call the service, send `new ApiResponse(status, data, message)`.
-6. **`<feature>.routes.ts`**: `create<Feature>Router(controller, deps)`. Every route has, in
+   In `shared/`: `<feature>.admin.controller.ts` (`<Feature>AdminController`) and
+   `<feature>.user.controller.ts` (`<Feature>UserController`), both using the one service.
+6. **`<feature>.routes.ts`**: `create<Feature>Router(controller, deps)`. In `shared/`:
+   `<feature>.admin.routes.ts` (`create<Feature>AdminRouter`, admin guards only) and
+   `<feature>.user.routes.ts` (`create<Feature>UserRouter`, user guards only). Every route has, in
    this order: guard(s), `validate({...})`, `asyncHandler(controller.method)`.
    - Admin route: `verifyAdmin`, then `requirePermission("<PAGE>")`.
    - Admin route that only touches the caller's own account: `verifyAdmin`, `ownAccountRoute()`.
@@ -48,15 +59,22 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
    - Put fixed paths (`/pages`) above parameter paths (`/:id`).
 7. **Permission page** (admin modules). Add the page name to `PAGES` in
    `src/config/rbac.config.ts`. Update the two tests that list all pages
-   (`tests/modules/role.test.ts` and `tests/modules/admin-auth.test.ts`: search for `"ROLE", "UPLOAD"`).
+   (`tests/modules/admin-panel/role.test.ts` and `tests/modules/admin-panel/admin-auth.test.ts`: search for `"ROLE", "UPLOAD"`).
 8. **`index.ts`**: `create<Feature>Module(infra, deps)` builds repository → service →
    controller and returns `{ service?, router: (deps: RouterDeps) => create<Feature>Router(...) }`.
+   In `shared/` it builds both controllers and returns `adminRouter` and `userRouter`
+   (copy `src/modules/shared/invite/index.ts`).
    Export only the types other code needs (`export type { <Feature>Service, <Feature>Dto }`).
-   Copy `src/modules/role/index.ts`. To use another module, import from its `index.js` only.
-9. **Wire it**: one line in `src/container.ts` (`const <feature> = create<Feature>Module(infra, {...})`,
-   then add it to `modules`), and one line in `src/routes.ts`
-   (`router.use("/admin/<features>", modules.<feature>.router(deps))`).
-10. **Tests** in `tests/modules/<feature>.test.ts`, one `describe("<METHOD> <path>")` per endpoint, using
+   Copy `src/modules/admin-panel/role/index.ts`. To use another module, import from its `index.js` only:
+   `../role/index.js` in the same panel, `../../shared/session/index.js` from another panel.
+9. **Wire it**: one line in `src/container.ts`
+   (`import { create<Feature>Module } from "./modules/<panel>/<feature>/index.js"`,
+   `const <feature> = create<Feature>Module(infra, {...})`, then add it to `modules`), and one line
+   per mount in `src/routes.ts` under the matching `// --- admin panel ---` or `// --- mobile app ---`
+   block (`router.use("/admin/<features>", modules.<feature>.router(deps))`; a shared module mounts
+   `adminRouter` under `/admin/...` and `userRouter` under `/user/...`).
+10. **Tests** in `tests/modules/<panel>/<feature>.test.ts` (same panel folder as the module;
+    helpers are imported from `../../helpers/`), one `describe("<METHOD> <path>")` per endpoint, using
     `tests/helpers/auth.ts`, `tests/helpers/guards.ts`, `tests/helpers/testApp.ts` and
     `tests/helpers/fixtures.ts`. Cover at least:
     - 401 without a token, 403 without the page permission, success with it

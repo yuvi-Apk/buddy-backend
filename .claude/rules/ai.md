@@ -4,11 +4,11 @@ paths:
   - "src/core/queue/**"
   - "src/jobs/**"
   - "src/worker.ts"
-  - "src/modules/book/**"
-  - "src/modules/assessment/**"
-  - "src/modules/weakness-profile/**"
-  - "src/modules/learning-path/**"
-  - "src/modules/tutor/**"
+  - "src/modules/*/book/**"
+  - "src/modules/*/assessment/**"
+  - "src/modules/*/weakness-profile/**"
+  - "src/modules/*/learning-path/**"
+  - "src/modules/*/tutor/**"
 ---
 
 # AI rules

@@ -6,7 +6,7 @@ import type { PageName } from "../config/rbac.config.js";
 import type { Redis } from "../config/redis.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import type { RateLimiters } from "../middlewares/rateLimit.middleware.js";
-import type { MembershipRole } from "../modules/organization/index.js";
+import type { MembershipRole } from "../modules/shared/organization/index.js";
 
 // Connections every module may need. Created once in container.ts.
 export interface Infra {

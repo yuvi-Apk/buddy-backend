@@ -41,7 +41,10 @@ src/
     queue/             (later) JobQueue
   jobs/                (later) one processor class per job
   worker.ts            (later) job process
-  modules/<feature>/   one folder per feature, always six files (see modules.md)
+  modules/             one folder per feature, grouped by panel (see modules.md)
+    admin-panel/       super admin panel only: admin-account, admin-auth, role, upload
+    user-panel/        user panel (app) only: user-auth, classroom, join-request
+    shared/            both panels: session, organization, invite (admin + user HTTP files)
 ```
 
 Shared types for wiring live in `src/types/module.types.ts`: `Infra` (prisma, redis, logger),
@@ -49,9 +52,13 @@ Shared types for wiring live in `src/types/module.types.ts`: `Infra` (prisma, re
 
 ## Modules
 
-Built: `admin`, `admin-auth`, `user-auth`, `session`, `role`, `upload`, `organization`, `classroom`, `invite`, `join-request`.
+Built:
 
-Reserved (create with the `new-module` skill when needed):
+- `admin-panel/`: `admin-account`, `admin-auth`, `role`, `upload`
+- `user-panel/`: `user-auth`, `classroom`, `join-request`
+- `shared/`: `session`, `organization`, `invite`
+
+Reserved (create with the `new-module` skill when needed; it picks the panel folder):
 
 | Module             | Purpose                                                         |
 | ------------------ | --------------------------------------------------------------- |

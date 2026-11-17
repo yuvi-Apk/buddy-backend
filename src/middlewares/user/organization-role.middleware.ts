@@ -13,7 +13,7 @@ import {
   ORGANIZATION_ID_HEADER,
   type MembershipRole,
   type OrganizationService,
-} from "../../modules/organization/index.js";
+} from "../../modules/shared/organization/index.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { markGuard } from "../routeGuard.js";

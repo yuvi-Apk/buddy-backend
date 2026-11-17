@@ -20,7 +20,7 @@ export function createApiRouter(container: Container): Router {
   router.use("/admin/auth", modules.adminAuth.router(deps));
   router.use("/admin/sessions", modules.session.adminRouter(deps));
   router.use("/admin/roles", modules.role.router(deps));
-  router.use("/admin/admins", modules.admin.router(deps));
+  router.use("/admin/admins", modules.adminAccount.router(deps));
   router.use("/admin/uploads", modules.upload.router(deps));
   router.use("/admin/organizations", modules.organization.adminRouter(deps));
   router.use(

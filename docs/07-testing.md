@@ -6,7 +6,7 @@ the settings from `.env.test`. Nothing is mocked except Google: a fake verifier 
 ```bash
 docker compose up -d                      # once
 pnpm test                                 # everything
-pnpm test tests/modules/role.test.ts      # one file
+pnpm test tests/modules/admin-panel/role.test.ts      # one file
 pnpm test -t "POST /admin/roles"          # tests whose name matches
 ```
 
@@ -24,7 +24,10 @@ tests/
     guards.ts      expectLoginRequired(routes), expectAdminPageRequired(routes, page), MISSING_ID
   guardrails/      ESLint rules, env files, "every route has a guard"
   platform/        app shell, data stores, validate/pagination/rate limit, logging, cross-module guards
-  modules/         <feature>.test.ts, one file per module
+  modules/         one file per module, in the module's panel folder:
+    admin-panel/   admin-account, admin-auth, role, upload
+    user-panel/    user-auth, classroom, join-request
+    shared/        session, organization, invite
 ```
 
 ## A module test file

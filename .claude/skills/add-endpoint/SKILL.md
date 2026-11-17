@@ -6,8 +6,19 @@ description: Add one endpoint to an existing Buddy backend module, working throu
 # Add an endpoint
 
 Work bottom-up through the module's files, so each layer is ready before the next one
-uses it. `src/modules/role/` is the reference for every step; the rules are in
+uses it. `src/modules/admin-panel/role/` is the reference for every step; the rules are in
 `.claude/rules/modules.md` and the full guide for people is `docs/04-add-an-endpoint.md`.
+
+Modules sit in a panel folder: `src/modules/admin-panel/`, `user-panel/` or `shared/`.
+
+- In a `shared/` module, the controller and route go in the file for the panel that calls the
+  endpoint: `<feature>.admin.controller.ts` + `<feature>.admin.routes.ts`, or
+  `<feature>.user.controller.ts` + `<feature>.user.routes.ts`. The schema, repository and service
+  stay one file each.
+- If the module is in `admin-panel/` or `user-panel/` and the new endpoint is for the **other**
+  panel, stop and tell the user. The module must first move to `shared/` and split its controller
+  and routes by panel (`.claude/rules/modules.md`, "Panel folders"), and its test file moves to
+  `tests/modules/shared/`.
 
 ## Steps
 
@@ -20,13 +31,13 @@ uses it. `src/modules/role/` is the reference for every step; the rules are in
    - Record fetched by ID: check that the caller may see it. Not theirs → `ApiError.notFound`.
    - Expected failures throw `ApiError` (`badRequest`, `notFound`, `conflict`, `forbidden`).
    - If the change affects cached data, invalidate the cache here (see `RoleService.update`).
-4. **Controller** (`<feature>.controller.ts`): add an arrow-property method. Input comes from
+4. **Controller** (`<feature>.controller.ts`, or `<feature>.<admin|user>.controller.ts` in `shared/`): add an arrow-property method. Input comes from
    `req.validated` only. The caller comes from `req.admin`, `req.user` or `req.auth`.
    Respond with `res.status(n).json(new ApiResponse(n, data, "message"))`: 201 for create,
    200 otherwise.
-5. **Route** (`<feature>.routes.ts`): add the route as guard(s) → `validate({...})` →
+5. **Route** (`<feature>.routes.ts`, or `<feature>.<admin|user>.routes.ts` in `shared/`): add the route as guard(s) → `validate({...})` →
    `asyncHandler(controller.method)`. Fixed paths go above `/:id` paths.
-6. **Test** (`tests/modules/<feature>.test.ts`): add a `describe("<METHOD> <path>")` block
+6. **Test** (`tests/modules/<panel>/<feature>.test.ts`): add a `describe("<METHOD> <path>")` block
    with tests in the order guard (401/403) → 400 → 404 / not the owner → rule failures → success.
    Use `adminWith`, `superAdmin`, `signInUser` from `tests/helpers/auth.ts` and
    `expectAdminPageRequired` from `tests/helpers/guards.ts`.

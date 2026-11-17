@@ -6,10 +6,17 @@ from the admin panel. It is only an example of the steps: it does not exist in t
 Before you start, answer three questions. They decide what you write:
 
 1. **Who calls it?** The admin panel (`/admin/...`, `verifyAdmin` + a page), the mobile app
-   (`/user/...`, `verifyUser`), or both (two routers).
+   (`/user/...`, `verifyUser`), or both. This picks the folder: `src/modules/admin-panel/`,
+   `src/modules/user-panel/` or `src/modules/shared/`. A shared module keeps one schema,
+   repository and service, and splits the HTTP layer into `<feature>.admin.controller.ts` +
+   `<feature>.admin.routes.ts` and `<feature>.user.controller.ts` + `<feature>.user.routes.ts`
+   (see `src/modules/shared/invite/`).
 2. **Which table(s) does it own?** Each table belongs to exactly one module.
 3. **Do the rows belong to someone?** (a school, a user). If so, every read or change by ID must
    check ownership in the service, and someone else's record answers **404**.
+
+The `school` example is admin-only, so its files go in `src/modules/admin-panel/school/` and its
+tests in `tests/modules/admin-panel/school.test.ts`.
 
 Work through the steps in order; each step only uses what the earlier steps made.
 
@@ -45,7 +52,7 @@ Tables that belong to a school later get a required `schoolId` column with `@@in
 
 ```ts
 import { z } from "zod";
-import { paginationQuery } from "../../utils/pagination.js";
+import { paginationQuery } from "../../../utils/pagination.js";
 
 export const createSchoolBody = z.strictObject({
   name: z.string().trim().min(2).max(120),
@@ -73,8 +80,8 @@ export interface SchoolDto {
 ## Step 3. `school.repository.ts`
 
 ```ts
-import type { PrismaClient } from "../../config/prisma.js";
-import { toSkipTake } from "../../utils/pagination.js";
+import type { PrismaClient } from "../../../config/prisma.js";
+import { toSkipTake } from "../../../utils/pagination.js";
 import type {
   CreateSchoolBody,
   ListSchoolsQuery,
@@ -126,8 +133,8 @@ export class SchoolRepository {
 ## Step 4. `school.service.ts`
 
 ```ts
-import { ApiError } from "../../utils/ApiError.js";
-import { paginated, type Paginated } from "../../utils/pagination.js";
+import { ApiError } from "../../../utils/ApiError.js";
+import { paginated, type Paginated } from "../../../utils/pagination.js";
 import type { SchoolRepository } from "./school.repository.js";
 import type {
   CreateSchoolBody,
@@ -160,7 +167,7 @@ export class SchoolService {
 
 ```ts
 import type { Request, Response } from "express";
-import { ApiResponse } from "../../utils/ApiResponse.js";
+import { ApiResponse } from "../../../utils/ApiResponse.js";
 import type {
   CreateSchoolBody,
   ListSchoolsQuery,
@@ -197,9 +204,9 @@ export class SchoolController {
 
 ```ts
 import { Router } from "express";
-import { validate } from "../../middlewares/validate.middleware.js";
-import type { Guards } from "../../types/module.types.js";
-import { asyncHandler } from "../../utils/asyncHandler.js";
+import { validate } from "../../../middlewares/validate.middleware.js";
+import type { Guards } from "../../../types/module.types.js";
+import { asyncHandler } from "../../../utils/asyncHandler.js";
 import type { SchoolController } from "./school.controller.js";
 import {
   createSchoolBody,
@@ -252,13 +259,13 @@ export const PAGES = ["ROLE", "UPLOAD", "ORGANIZATION", "BOOK"] as const;
 ```
 
 Two tests list every page and need the new one: search for `"ROLE", "UPLOAD"` in
-`tests/modules/role.test.ts` and `tests/modules/admin-auth.test.ts`.
+`tests/modules/admin-panel/role.test.ts` and `tests/modules/admin-panel/admin-auth.test.ts`.
 
 ## Step 8. `index.ts`
 
 ```ts
 // Public entry point of the school module. Other code imports from here only.
-import type { Infra, RouterDeps } from "../../types/module.types.js";
+import type { Infra, RouterDeps } from "../../../types/module.types.js";
 import { SchoolController } from "./school.controller.js";
 import { SchoolRepository } from "./school.repository.js";
 import { createSchoolRouter } from "./school.routes.js";
@@ -298,7 +305,7 @@ router.use("/admin/schools", modules.school.router(deps));
 
 ## Step 10. Tests
 
-Create `tests/modules/school.test.ts` with one `describe` per endpoint (see [07 Testing](07-testing.md)):
+Create `tests/modules/admin-panel/school.test.ts` with one `describe` per endpoint (see [07 Testing](07-testing.md)):
 
 ```ts
 describe("guards on /admin/schools", () => {

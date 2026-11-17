@@ -1,7 +1,7 @@
 # 02 Module anatomy
 
-Every module in `src/modules/<feature>/` has exactly these six files. The examples are real code
-from `src/modules/role/`, shortened.
+Every module in `src/modules/<panel>/<feature>/` has exactly these six files. The examples are real code
+from `src/modules/admin-panel/role/`, shortened.
 
 | File                      | Job                                            | May import                                         |
 | ------------------------- | ---------------------------------------------- | -------------------------------------------------- |
@@ -173,7 +173,7 @@ Which guard to use is explained in [05 Auth and permissions](05-auth-and-permiss
 ## index.ts: build the module
 
 Creates the module's classes in order and returns only what the rest of the app needs. Other code
-imports **only** from this file; ESLint blocks `../role/role.service.js` from outside the module.
+imports **only** from this file; ESLint blocks `../role/role.service.js` or `../../shared/session/session.service.js` from outside the module.
 
 ```ts
 export function createRoleModule({ prisma, redis }: Infra) {

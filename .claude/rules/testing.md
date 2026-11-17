@@ -18,7 +18,10 @@ tests/
                guards.ts (expectLoginRequired, expectAdminPageRequired, MISSING_ID)
   guardrails/  ESLint rules, env files, every route has a guard
   platform/    app shell, data stores, HTTP building blocks, logging, cross-module guards
-  modules/     <feature>.test.ts, one file per module
+  modules/     one file per module, in the same panel folder as the module:
+    admin-panel/   admin-account, admin-auth, role, upload
+    user-panel/    user-auth, classroom, join-request
+    shared/        session, organization, invite (admin and user routes in one file)
 ```
 
 ## Module test file
@@ -47,4 +50,4 @@ describe("POST /admin/roles", () => {
 - Log in through the helpers in `auth.ts`, never by copying the login code.
 - Never delete a test to make a change pass. Moving or renaming one is fine.
 - A list endpoint test checks the pagination metadata and that `limit=101` returns 400.
-- `pnpm test tests/modules/role.test.ts` runs one file.
+- `pnpm test tests/modules/admin-panel/role.test.ts` runs one file.

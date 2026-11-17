@@ -1,7 +1,7 @@
 # 04 Add an endpoint
 
 This guide adds one route to a module that already exists. The example adds
-`GET /admin/roles/:id/admins`, "list the admins who hold this role", to `src/modules/role/`. It is
+`GET /admin/roles/:id/admins`, "list the admins who hold this role", to `src/modules/admin-panel/role/`. It is
 only an example of the steps; it is not in the code.
 
 Work **bottom-up**: schema → repository → service → controller → route → test. Each layer is then
@@ -99,7 +99,7 @@ the new route. Only export a new type from `index.ts` if another module needs it
 
 ## Step 6. Test
 
-Add a `describe` block for the endpoint to `tests/modules/role.test.ts`, and add the route to the
+Add a `describe` block for the endpoint to `tests/modules/admin-panel/role.test.ts`, and add the route to the
 list in the module's "guards" block so the 401/403 checks cover it.
 
 ```ts

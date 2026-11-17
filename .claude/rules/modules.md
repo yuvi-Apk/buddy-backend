@@ -8,8 +8,31 @@ paths:
 
 # Modules
 
-Every feature lives in `src/modules/<feature>/` (kebab-case, singular) and has exactly six files.
-`src/modules/role/` is the reference for all of them.
+Every feature lives in `src/modules/<panel>/<feature>/` (kebab-case, singular).
+`src/modules/admin-panel/role/` is the reference for all of them.
+
+## Panel folders
+
+Pick the folder by who calls the module, before writing anything:
+
+| Folder         | Holds modules used by      | Mounted under | Built                                           |
+| -------------- | -------------------------- | ------------- | ----------------------------------------------- |
+| `admin-panel/` | the super admin panel only | `/admin/...`  | `admin-account`, `admin-auth`, `role`, `upload` |
+| `user-panel/`  | the user panel (app) only  | `/user/...`   | `user-auth`, `classroom`, `join-request`        |
+| `shared/`      | both panels                | both          | `session`, `organization`, `invite`             |
+
+- A module in `admin-panel/` or `user-panel/` has the six files below.
+- A module in `shared/` has one schema, repository and service, and **splits the HTTP layer by panel**:
+  `<feature>.admin.controller.ts` + `<feature>.admin.routes.ts` and `<feature>.user.controller.ts` +
+  `<feature>.user.routes.ts` (classes `<Feature>AdminController` / `<Feature>UserController`,
+  routers `create<Feature>AdminRouter` / `create<Feature>UserRouter`). `index.ts` builds both
+  controllers and returns `adminRouter` and `userRouter`. Example: `src/modules/shared/invite/`.
+  A shared module whose routes are identical for both panels (only the guards differ, like
+  `session`) keeps one controller and one routes file.
+- A module that starts in one panel and later gets routes in the other moves to `shared/` and splits.
+- Imports between modules: `../role/index.js` in the same panel, `../../shared/session/index.js`
+  from another panel. Deeper than `index.js` is blocked by ESLint (core-rules #6).
+- Tests mirror the layout: `tests/modules/<panel>/<feature>.test.ts`.
 
 | File                      | Job                                                                                          | May import                                                        |
 | ------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -38,7 +61,7 @@ export type { RoleDto } from "./role.schema.js"; // types other code needs
 ```
 
 - `router` is a function because the guards are built after the modules (they need the auth services).
-- Other code imports only from `index.js`: `import type { SessionService } from "../session/index.js"`.
+- Other code imports only from `index.js`: `import type { SessionService } from "../../shared/session/index.js"`.
 - Never export the repository.
 
 ## Wiring

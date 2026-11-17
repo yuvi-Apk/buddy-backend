@@ -10,18 +10,19 @@ const prismaBan = {
 };
 
 // A module's index.ts is its public entry point. From another module, only that file may be
-// imported: "../session/index.js" is fine, "../session/session.service.js" is not.
+// imported. Modules sit in a panel folder (src/modules/<panel>/<module>/), so another module is
+// "../role/" in the same panel or "../../shared/session/" in another one.
 const otherModuleDeepImportBan = {
-  regex: "^\\.\\./[^./][^/]*/(?!index\\.js$)[^/]+$",
+  regex: "^\\.\\./(\\.\\./[^./][^/]*/)?[^./][^/]*/(?!index\\.js$)[^/]+$",
   message:
-    "Import another module only through its index.js (core-rules #6), e.g. ../session/index.js.",
+    "Import another module only through its index.js (core-rules #6), e.g. ../../shared/session/index.js.",
 };
 
 // The same rule for code outside src/modules (container, routes, middlewares, types).
 const moduleDeepImportBan = {
-  regex: "(^|/)modules/[^/]+/(?!index\\.js$)[^/]+$",
+  regex: "(^|/)modules/[^/]+/[^/]+/(?!index\\.js$)[^/]+$",
   message:
-    "Import a module only through its index.js (core-rules #6), e.g. ./modules/session/index.js.",
+    "Import a module only through its index.js (core-rules #6), e.g. ./modules/shared/session/index.js.",
 };
 
 const anyRepositoryBan = {
