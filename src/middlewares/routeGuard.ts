@@ -10,6 +10,7 @@ export type GuardKind =
   | "admin" // verifyAdmin
   | "user" // verifyUser
   | "permission" // requirePermission / requireAnyPermission
+  | "organization-role" // requireOrganizationRole
   | "own-account"; // ownAccountRoute
 
 type MarkedHandler = RequestHandler & { [GUARD_KIND]?: GuardKind };

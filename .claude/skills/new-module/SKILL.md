@@ -42,12 +42,13 @@ Use kebab-case for the folder and file names (`learning-path`), PascalCase for c
    this order: guard(s), `validate({...})`, `asyncHandler(controller.method)`.
    - Admin route: `verifyAdmin`, then `requirePermission("<PAGE>")`.
    - Admin route that only touches the caller's own account: `verifyAdmin`, `ownAccountRoute()`.
-   - App route: `verifyUser`.
+   - App route: `verifyUser`. Inside one organization: `verifyUser`, `requireOrganizationRole(...)`,
+     then scope every query by `req.membership.organizationId`.
    - Open on purpose: `publicRoute()` (and `authRateLimit` if it can be abused).
    - Put fixed paths (`/pages`) above parameter paths (`/:id`).
 7. **Permission page** (admin modules). Add the page name to `PAGES` in
    `src/config/rbac.config.ts`. Update the two tests that list all pages
-   (`tests/modules/role.test.ts` and `tests/modules/admin-auth.test.ts`: search for `["ROLE", "UPLOAD"]`).
+   (`tests/modules/role.test.ts` and `tests/modules/admin-auth.test.ts`: search for `"ROLE", "UPLOAD"`).
 8. **`index.ts`**: `create<Feature>Module(infra, deps)` builds repository → service →
    controller and returns `{ service?, router: (deps: RouterDeps) => create<Feature>Router(...) }`.
    Export only the types other code needs (`export type { <Feature>Service, <Feature>Dto }`).

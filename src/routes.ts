@@ -21,10 +21,16 @@ export function createApiRouter(container: Container): Router {
   router.use("/admin/sessions", modules.session.adminRouter(deps));
   router.use("/admin/roles", modules.role.router(deps));
   router.use("/admin/uploads", modules.upload.router(deps));
+  router.use("/admin/organizations", modules.organization.adminRouter(deps));
+  router.use(
+    "/admin/users",
+    modules.organization.membershipSettingsAdminRouter(deps)
+  );
 
   // --- mobile app ---
   router.use("/user/auth", modules.userAuth.router(deps));
   router.use("/user/sessions", modules.session.userRouter(deps));
+  router.use("/user/organizations", modules.organization.userRouter(deps));
 
   return router;
 }

@@ -1,6 +1,7 @@
 // Extra fields this app adds to the Express request.
 import "express";
 import type { AuthenticatedAdmin } from "../modules/admin-auth/index.js";
+import type { ActiveMembership } from "../modules/organization/index.js";
 import type { SessionOwner } from "../modules/session/index.js";
 import type { AuthenticatedUser } from "../modules/user-auth/index.js";
 
@@ -26,6 +27,9 @@ declare global {
 
       // Set by verifyUser: the signed-in app user.
       user?: AuthenticatedUser;
+
+      // Set by requireOrganizationRole: the caller's membership in the X-Organization-Id organization.
+      membership?: ActiveMembership;
     }
   }
 }

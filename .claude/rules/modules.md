@@ -56,15 +56,17 @@ export type { RoleDto } from "./role.schema.js"; // types other code needs
 | Admin panel, one of several pages                  | `verifyAdmin`, `requireAnyPermission([...])` |
 | Admin's own account (profile, own sessions)        | `verifyAdmin`, `ownAccountRoute()`           |
 | Mobile app                                         | `verifyUser`                                 |
+| Mobile app, inside one organization                | `verifyUser`, `requireOrganizationRole(...)` |
 | Open on purpose (sign-in, refresh)                 | `publicRoute()`, plus `authRateLimit`        |
 
-Fixed paths (`/pages`) go above parameter paths (`/:id`). A new admin page goes into `PAGES` in
+`requireOrganizationRole()` reads the `X-Organization-Id` header and sets `req.membership`; scope
+every query by `req.membership.organizationId`. Fixed paths (`/pages`) go above parameter paths (`/:id`). A new admin page goes into `PAGES` in
 `src/config/rbac.config.ts`.
 
 ## Controllers and responses
 
 - Methods are arrow properties (`list = async (req, res) => {}`) so `this` survives being passed to a router.
-- Input comes only from `req.validated`; the caller from `req.admin`, `req.user` or `req.auth`.
+- Input comes only from `req.validated`; the caller from `req.admin`, `req.user`, `req.membership` or `req.auth`.
 - Success: `res.status(n).json(new ApiResponse(n, data, "message"))`, 201 for create, 200 otherwise.
 - Expected failure: `throw ApiError.notFound(...)` (or `badRequest`, `unauthorized`, `forbidden`,
   `conflict`, `tooManyRequests`). Never build error JSON by hand.

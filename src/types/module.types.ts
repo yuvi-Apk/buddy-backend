@@ -6,6 +6,7 @@ import type { PageName } from "../config/rbac.config.js";
 import type { Redis } from "../config/redis.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import type { RateLimiters } from "../middlewares/rateLimit.middleware.js";
+import type { MembershipRole } from "../modules/organization/index.js";
 
 // Connections every module may need. Created once in container.ts.
 export interface Infra {
@@ -24,6 +25,9 @@ export interface Guards {
   requirePermission: (page: PageName) => RequestHandler;
   // After verifyAdmin: the admin's role must have access to at least one of these pages.
   requireAnyPermission: (pages: PageName[]) => RequestHandler;
+  // After verifyUser: an ACTIVE membership in the X-Organization-Id organization, with one
+  // of these roles (none = any role). Sets req.membership.
+  requireOrganizationRole: (...roles: MembershipRole[]) => RequestHandler;
 }
 
 // What a module's router(...) function receives in routes.ts.

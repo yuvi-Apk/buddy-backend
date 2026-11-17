@@ -5,7 +5,7 @@
 //   2. guard its routes with requirePermission("<PAGE>")
 // The database only stores which role may access which page name.
 
-export const PAGES = ["ROLE", "UPLOAD"] as const;
+export const PAGES = ["ROLE", "UPLOAD", "ORGANIZATION"] as const;
 
 export type PageName = (typeof PAGES)[number];
 

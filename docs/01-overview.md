@@ -29,7 +29,7 @@ src/
                      rbac.config.ts (admin pages), upload.config.ts
   types/             express.d.ts (fields added to req), module.types.ts (wiring types)
   utils/             ApiError, ApiResponse, asyncHandler, errorHandler, pagination, upload helpers
-  middlewares/       guards (verifyAdmin, verifyUser, requirePermission), validate, rate limit, upload
+  middlewares/       guards (verifyAdmin, verifyUser, requirePermission, requireOrganizationRole), validate, rate limit, upload
   core/              shared infrastructure with no business rules: Google sign-in, tokens,
                      permission cache, file storage, health check. AI clients will live in core/ai.
   modules/           one folder per feature
@@ -104,7 +104,7 @@ and three files put them together:
   });
   ```
 
-  After the modules, it builds the guards (`verifyAdmin`, `verifyUser`, `requirePermission`),
+  After the modules, it builds the guards (`verifyAdmin`, `verifyUser`, `requirePermission`, `requireOrganizationRole`),
   because the guards need the auth services.
 
 - **`src/routes.ts`** mounts each module's router, one line each.

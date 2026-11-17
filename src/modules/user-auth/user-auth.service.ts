@@ -66,6 +66,11 @@ export class UserAuthService {
     return this.users.findActiveProfile(userId);
   }
 
+  // Used by the organization module to add an existing user by email.
+  findActiveUserIdByEmail(email: string): Promise<string | null> {
+    return this.users.findActiveUserIdByEmail(email.toLowerCase());
+  }
+
   private toResult(
     user: AuthenticatedUser,
     session: IssuedSession

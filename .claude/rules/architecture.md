@@ -12,7 +12,7 @@ request
   → src/app.ts            request log + ID, helmet, CORS allowlist, 100 kb body limit, cookies
   → src/routes.ts         /api/v1, health check, global rate limit, one mount per module
   → <feature>.routes.ts   guard(s) → validate({ body, query, params }) → asyncHandler(controller.x)
-  → <feature>.controller  reads req.validated + req.admin / req.user, calls the service
+  → <feature>.controller  reads req.validated + req.admin / req.user / req.membership, calls the service
   → <feature>.service     rules, ownership checks, transactions, cache invalidation
   → <feature>.repository  the only layer that talks to Prisma
   → errorHandler          turns any thrown error into a safe JSON response
@@ -49,13 +49,12 @@ Shared types for wiring live in `src/types/module.types.ts`: `Infra` (prisma, re
 
 ## Modules
 
-Built: `admin-auth`, `user-auth`, `session`, `role`, `upload`.
+Built: `admin-auth`, `user-auth`, `session`, `role`, `upload`, `organization`.
 
 Reserved (create with the `new-module` skill when needed):
 
 | Module             | Purpose                                                         |
 | ------------------ | --------------------------------------------------------------- |
-| `organization`     | Schools, colleges, coaching centres (the tenant); memberships   |
 | `classroom`        | Classes and sections inside a school                            |
 | `student`          | Student profile, enrolment in a section                         |
 | `book`             | Book upload; chunking and embedding run in a job                |

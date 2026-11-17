@@ -93,7 +93,7 @@ describe("GET /admin/roles/pages", () => {
     const { auth } = await superAdmin();
     const res = await request(app).get(`${ROLES}/pages`).set(auth);
     expect(res.status).toBe(200);
-    expect(res.body.data).toEqual(["ROLE", "UPLOAD"]);
+    expect(res.body.data).toEqual(["ROLE", "UPLOAD", "ORGANIZATION"]);
   });
 });
 

@@ -20,6 +20,7 @@ Every route must have one of these. `tests/guardrails/route-guards.test.ts` fail
 | Something any of several admin pages may use      | `verifyAdmin`, `requireAnyPermission([...])` |
 | The admin's own account (profile, own sessions)   | `verifyAdmin`, `ownAccountRoute()`           |
 | The mobile app                                    | `verifyUser`                                 |
+| The app, inside one organization                  | `verifyUser`, `requireOrganizationRole(...)` |
 | Open on purpose (sign-in, refresh)                | `publicRoute()`, plus `authRateLimit`        |
 
 `ownAccountRoute()` and `publicRoute()` don't check anything themselves. They are labels that say
@@ -30,7 +31,7 @@ Every route must have one of these. `tests/guardrails/route-guards.test.ts` fail
 Permissions are defined **in code**, in `src/config/rbac.config.ts`:
 
 ```ts
-export const PAGES = ["ROLE", "UPLOAD"] as const;
+export const PAGES = ["ROLE", "UPLOAD", "ORGANIZATION"] as const;
 export const SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 ```
 
@@ -45,6 +46,44 @@ To protect a new admin feature: add its page to `PAGES`, then use `requirePermis
 routes. `requirePermission` reads the role's pages from Redis (`role-perms:<roleId>`, filled from
 Postgres on a miss). When a role changes, `RoleService` clears that key, so the change applies on
 the admin's very next request.
+
+## Organizations (inside the app)
+
+A user's rights inside a school, college or coaching centre come from their **membership**
+(`memberships.role`: `STUDENT`, `TEACHER` or `ORGANIZATION_ADMIN`), not from the user row. A user
+with no active membership is an individual.
+
+App routes that act inside one organization add `requireOrganizationRole(...)` after `verifyUser`,
+and the app names the organization in a header:
+
+```ts
+router.get("/current", verifyUser, requireOrganizationRole(), controller.getCurrent);
+router.patch("/current/join-code", verifyUser, requireOrganizationRole("ORGANIZATION_ADMIN"), ...);
+```
+
+```
+X-Organization-Id: <organization id>      (from GET /user/organizations)
+```
+
+| Situation                                                       | Answer |
+| --------------------------------------------------------------- | ------ |
+| Header missing or not a UUID                                    | 400    |
+| Not a member, left, removed, or the organization is deactivated | 404    |
+| Membership suspended, or the role is not in the list            | 403    |
+
+No roles means any active member. The guard sets `req.membership` (`id`, `organizationId`, `role`);
+services scope every query by `req.membership.organizationId`, never by an id from the body.
+
+**Joining** (an admin adds an organization admin today; invites and join codes come next) always goes
+through `OrganizationService.addMember`, one transaction with two conditional updates
+(core-rules #3):
+
+1. `users.activeMembershipCount` goes up only if it is 0, or the user has
+   `canJoinMultipleOrganizations` (set by an admin: `PATCH /admin/users/:userId/membership-settings`).
+2. `organizations.activeMemberCount` goes up only if the organization is active and below `maxMembers`.
+3. The membership is created, or a `LEFT` / `REMOVED` one is reactivated.
+
+Any refusal rolls all three back and answers 409. CHECK constraints in the database back up both limits.
 
 ## Sessions and tokens
 

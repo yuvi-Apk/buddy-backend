@@ -248,10 +248,10 @@ export function createSchoolRouter(
 Admin routes need a page. Add it in `src/config/rbac.config.ts`:
 
 ```ts
-export const PAGES = ["ROLE", "UPLOAD", "SCHOOL"] as const;
+export const PAGES = ["ROLE", "UPLOAD", "ORGANIZATION", "BOOK"] as const;
 ```
 
-Two tests list every page and need the new one: search for `["ROLE", "UPLOAD"]` in
+Two tests list every page and need the new one: search for `"ROLE", "UPLOAD"` in
 `tests/modules/role.test.ts` and `tests/modules/admin-auth.test.ts`.
 
 ## Step 8. `index.ts`

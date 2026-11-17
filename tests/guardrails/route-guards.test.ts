@@ -82,4 +82,15 @@ describe("route guards", () => {
     });
     expect(wrongOrder.map((route) => route.name)).toEqual([]);
   });
+
+  it("the organization role guard always runs after verifyUser", () => {
+    const wrongOrder = routes.filter((route) => {
+      const login = route.guards.indexOf("user");
+      const organizationRole = route.guards.indexOf("organization-role");
+      return (
+        organizationRole !== -1 && (login === -1 || login > organizationRole)
+      );
+    });
+    expect(wrongOrder.map((route) => route.name)).toEqual([]);
+  });
 });

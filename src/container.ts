@@ -21,7 +21,9 @@ import {
 } from "./middlewares/admin/auth.middleware.js";
 import { createRateLimiters } from "./middlewares/rateLimit.middleware.js";
 import { createVerifyUser } from "./middlewares/user/auth.middleware.js";
+import { createRequireOrganizationRole } from "./middlewares/user/organization-role.middleware.js";
 import { createAdminAuthModule } from "./modules/admin-auth/index.js";
+import { createOrganizationModule } from "./modules/organization/index.js";
 import { createRoleModule } from "./modules/role/index.js";
 import { createSessionModule } from "./modules/session/index.js";
 import { createUploadModule } from "./modules/upload/index.js";
@@ -78,6 +80,9 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     googleTokenVerifier,
   });
   const upload = createUploadModule(infra, { storage });
+  const organization = createOrganizationModule(infra, {
+    userAuthService: userAuth.service,
+  });
 
   // Guards
   const guards: Guards = {
@@ -92,10 +97,13 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       userAuthService: userAuth.service,
     }),
     ...createPermissionGuards(role.permissionService),
+    requireOrganizationRole: createRequireOrganizationRole(
+      organization.service
+    ),
   };
 
   return {
-    modules: { session, role, adminAuth, userAuth, upload },
+    modules: { session, role, adminAuth, userAuth, upload, organization },
     guards,
     rateLimiters,
     tokenService,

@@ -31,6 +31,14 @@ export class UserAuthRepository {
     });
   }
 
+  async findActiveUserIdByEmail(email: string): Promise<string | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { email, isActive: true },
+      select: { id: true },
+    });
+    return user?.id ?? null;
+  }
+
   // The user's public profile, or null when the account is missing or disabled.
   findActiveProfile(userId: string): Promise<AuthenticatedUser | null> {
     return this.prisma.user.findFirst({
