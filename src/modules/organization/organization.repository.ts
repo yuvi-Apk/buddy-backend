@@ -210,6 +210,16 @@ export class OrganizationRepository {
     return count === 0 ? "BELOW_MEMBER_COUNT" : organization;
   }
 
+  // Only an active organization with its join code switched on.
+  findJoinableByCode(
+    joinCode: string
+  ): Promise<{ id: string; name: string; type: OrganizationType } | null> {
+    return this.prisma.organization.findFirst({
+      where: { joinCode, isActive: true, isJoinCodeEnabled: true },
+      select: { id: true, name: true, type: true },
+    });
+  }
+
   findJoinCode(organizationId: string): Promise<JoinCodeDto | null> {
     return this.prisma.organization.findUnique({
       where: { id: organizationId },
@@ -409,6 +419,21 @@ export class OrganizationRepository {
   }
 
   // Only an ACTIVE membership is promoted; returns false otherwise.
+  // Read-only early check for a nicer error; the join rule re-checks atomically.
+  async hasRoomForAnotherMembership(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        OR: [
+          { activeMembershipCount: 0 },
+          { canJoinMultipleOrganizations: true },
+        ],
+      },
+      select: { id: true },
+    });
+    return user !== null;
+  }
+
   async promoteToOrganizationAdmin(
     organizationId: string,
     userId: string

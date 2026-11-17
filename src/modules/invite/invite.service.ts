@@ -141,7 +141,7 @@ export class InviteService {
     sentBy: { userId: string } | { adminId: string }
   ): Promise<CreatedInviteDto> {
     if (input.classroomId) {
-      await this.classrooms.assertCanInviteInto(
+      await this.classrooms.assertCanAddMembersTo(
         organizationId,
         input.classroomId
       );
@@ -195,7 +195,7 @@ export class InviteService {
     }
 
     if (invite.classroomId) {
-      await this.classrooms.addMemberAfterInvite(
+      await this.classrooms.addMemberAfterJoining(
         invite.organizationId,
         invite.classroomId,
         joined.member.id

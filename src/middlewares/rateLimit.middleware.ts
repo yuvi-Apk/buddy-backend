@@ -44,6 +44,8 @@ export interface RateLimiters {
   global: RequestHandler;
   // Sign-in and refresh routes: slows down token guessing.
   auth: RequestHandler;
+  // Sending a join code: slows down guessing codes.
+  joinCode: RequestHandler;
 }
 
 export function createRateLimiters(redis: Redis): RateLimiters {
@@ -57,6 +59,11 @@ export function createRateLimiters(redis: Redis): RateLimiters {
       name: "auth",
       windowSeconds: 15 * 60,
       limit: 20,
+    }),
+    joinCode: createRateLimiter(redis, {
+      name: "join-code",
+      windowSeconds: 15 * 60,
+      limit: 10,
     }),
   };
 }

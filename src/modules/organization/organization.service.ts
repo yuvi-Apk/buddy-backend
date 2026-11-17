@@ -203,6 +203,28 @@ export class OrganizationService {
     };
   }
 
+  // ===========================================================================
+  // Used by the join-request module
+  // ===========================================================================
+
+  // Null for an unknown code, a deactivated organization or a switched-off code alike,
+  // so a guesser learns nothing.
+  findJoinableByCode(joinCode: string) {
+    return this.organizations.findJoinableByCode(joinCode);
+  }
+
+  async isSeatHoldingMember(
+    organizationId: string,
+    userId: string
+  ): Promise<boolean> {
+    const member = await this.organizations.findMember(organizationId, userId);
+    return member?.status === "ACTIVE" || member?.status === "SUSPENDED";
+  }
+
+  hasRoomForAnotherMembership(userId: string): Promise<boolean> {
+    return this.organizations.hasRoomForAnotherMembership(userId);
+  }
+
   async getJoinCode(organizationId: string): Promise<JoinCodeDto> {
     const joinCode = await this.organizations.findJoinCode(organizationId);
     if (!joinCode) throw ApiError.notFound("Organization not found");

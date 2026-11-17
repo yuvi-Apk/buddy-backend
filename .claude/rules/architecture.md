@@ -49,7 +49,7 @@ Shared types for wiring live in `src/types/module.types.ts`: `Infra` (prisma, re
 
 ## Modules
 
-Built: `admin-auth`, `user-auth`, `session`, `role`, `upload`, `organization`, `classroom`, `invite`.
+Built: `admin-auth`, `user-auth`, `session`, `role`, `upload`, `organization`, `classroom`, `invite`, `join-request`.
 
 Reserved (create with the `new-module` skill when needed):
 

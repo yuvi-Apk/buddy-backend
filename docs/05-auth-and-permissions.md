@@ -102,6 +102,16 @@ so a forwarded link is useless. Invites last 7 days; one pending invite per emai
 Accepting claims the invite first, then runs the join rule; if joining is refused (no seats, already
 in an organization) the claim is released and the invite stays usable.
 
+**Join requests** (Way 2). A user sends an organization's join code with
+`POST /user/join-requests { joinCode, requestedRole (STUDENT or TEACHER), requesterNote?,
+sharePastDataWithOrganization? }`. An unknown code, a deactivated organization and a switched-off
+code all answer the same 404, and sending codes has its own rate limit (10 per 15 minutes per IP),
+so codes can't be guessed. The person lists (`GET /user/join-requests/mine`) and cancels their own
+requests. Organization admins list their organization's queue (`GET /user/join-requests`) and
+approve (optionally overriding the role and placing the person in a classroom) or reject with a
+note. Approving marks the request APPROVED first, then runs the join rule; if joining is refused
+the request goes back to PENDING. One pending request per user per organization.
+
 **Classrooms** (`/user/classrooms`): organization admins create, archive and fill them and see them
 all; teachers and students see only the classrooms they are in. A classroom of another
 organization, or one the caller isn't in, answers 404.

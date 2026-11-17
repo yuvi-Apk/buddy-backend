@@ -122,11 +122,11 @@ export class ClassroomService {
   }
 
   // ===========================================================================
-  // Used by the invite module
+  // Used by the invite and join-request modules
   // ===========================================================================
 
-  // An invite may name a classroom: it must be in the organization and not archived.
-  async assertCanInviteInto(
+  // An invite or approval may name a classroom: it must be in the organization and not archived.
+  async assertCanAddMembersTo(
     organizationId: string,
     classroomId: string
   ): Promise<void> {
@@ -140,9 +140,9 @@ export class ClassroomService {
     }
   }
 
-  // After an invite is accepted. Skipped when the classroom was archived or removed since;
-  // the person is still in the organization.
-  async addMemberAfterInvite(
+  // After someone joins by invite or approved request. Skipped when the classroom was archived
+  // or removed since; the person is still in the organization.
+  async addMemberAfterJoining(
     organizationId: string,
     classroomId: string,
     membershipId: string
