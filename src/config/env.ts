@@ -52,6 +52,9 @@ export const envSchema = z.object({
 
   STORAGE_DRIVER: z.enum(["local"]).default("local"),
 
+  // Page in the app that opens an invite; the API appends ?token=... to it.
+  INVITE_LINK_BASE_URL: z.url({ protocol: /^https?$/ }),
+
   // Used only by `pnpm db:seed`: the first super admin, who then signs in with this Google account.
   SEED_SUPER_ADMIN_EMAIL: z.email().optional(),
 });

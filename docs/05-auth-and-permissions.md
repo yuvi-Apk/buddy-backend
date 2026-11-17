@@ -92,6 +92,16 @@ An organization always keeps one ACTIVE organization admin: the last one can't l
 change their own membership, and every change that could remove an admin runs under a per-organization
 advisory lock, so two admins demoting each other at once can't both succeed.
 
+**Invites** (Way 1). An organization admin (`POST /user/invites`) or an admin
+(`POST /admin/organizations/:organizationId/invites`) invites an email, optionally with a role and a
+classroom. No email is sent yet: the response carries `inviteLink` (`INVITE_LINK_BASE_URL?token=...`)
+once, and only the token's SHA-256 hash is stored. The person signs in with that Google account and
+accepts with `POST /user/invites/accept { token }`, or from `GET /user/invites/received` with
+`POST /user/invites/received/:id/accept`. The invite's email must match the signed-in Google email,
+so a forwarded link is useless. Invites last 7 days; one pending invite per email per organization.
+Accepting claims the invite first, then runs the join rule; if joining is refused (no seats, already
+in an organization) the claim is released and the invite stays usable.
+
 **Classrooms** (`/user/classrooms`): organization admins create, archive and fill them and see them
 all; teachers and students see only the classrooms they are in. A classroom of another
 organization, or one the caller isn't in, answers 404.

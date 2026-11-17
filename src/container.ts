@@ -24,6 +24,7 @@ import { createVerifyUser } from "./middlewares/user/auth.middleware.js";
 import { createRequireOrganizationRole } from "./middlewares/user/organization-role.middleware.js";
 import { createAdminAuthModule } from "./modules/admin-auth/index.js";
 import { createClassroomModule } from "./modules/classroom/index.js";
+import { createInviteModule } from "./modules/invite/index.js";
 import { createOrganizationModule } from "./modules/organization/index.js";
 import { createRoleModule } from "./modules/role/index.js";
 import { createSessionModule } from "./modules/session/index.js";
@@ -87,6 +88,10 @@ export function createContainer(overrides: ContainerOverrides = {}) {
   const classroom = createClassroomModule(infra, {
     organizationService: organization.service,
   });
+  const invite = createInviteModule(infra, {
+    organizationService: organization.service,
+    classroomService: classroom.service,
+  });
 
   // Guards
   const guards: Guards = {
@@ -115,6 +120,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       upload,
       organization,
       classroom,
+      invite,
     },
     guards,
     rateLimiters,

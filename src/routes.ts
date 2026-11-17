@@ -23,6 +23,10 @@ export function createApiRouter(container: Container): Router {
   router.use("/admin/uploads", modules.upload.router(deps));
   router.use("/admin/organizations", modules.organization.adminRouter(deps));
   router.use(
+    "/admin/organizations/:organizationId/invites",
+    modules.invite.adminRouter(deps)
+  );
+  router.use(
     "/admin/users",
     modules.organization.membershipSettingsAdminRouter(deps)
   );
@@ -32,6 +36,7 @@ export function createApiRouter(container: Container): Router {
   router.use("/user/sessions", modules.session.userRouter(deps));
   router.use("/user/organizations", modules.organization.userRouter(deps));
   router.use("/user/classrooms", modules.classroom.router(deps));
+  router.use("/user/invites", modules.invite.userRouter(deps));
 
   return router;
 }

@@ -28,8 +28,12 @@ describe("log redaction", () => {
         password: "hunter2-password",
         idToken: "google-id-token-123",
         token: "tok-abc",
+        inviteLink: "https://app.buddy.test/invite?token=invite-secret-1",
         user: { password: "nested-password", refreshToken: "ref-xyz" },
         body: { accessToken: "acc-123", idToken: "google-id-token-456" },
+        data: {
+          inviteLink: "https://app.buddy.test/invite?token=invite-secret-2",
+        },
         email: "visible@buddy.test",
       },
       "sign-in attempt"
@@ -44,6 +48,8 @@ describe("log redaction", () => {
       "ref-xyz",
       "acc-123",
       "google-id-token-456",
+      "invite-secret-1",
+      "invite-secret-2",
     ]) {
       expect(logged, secret).not.toContain(secret);
     }

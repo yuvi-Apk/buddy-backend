@@ -34,6 +34,10 @@ export function createOrganizationModule(
 export type OrganizationModule = ReturnType<typeof createOrganizationModule>;
 export type { OrganizationService } from "./organization.service.js";
 export type {
+  JoinOrganizationInput,
+  JoinRefusal,
+} from "./organization.repository.js";
+export type {
   ActiveMembership,
   MembershipRole,
   OrganizationDto,

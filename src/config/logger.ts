@@ -16,6 +16,8 @@ const REDACTED_PATHS = [
   "*.refreshToken",
   "idToken",
   "*.idToken",
+  "inviteLink",
+  "*.inviteLink",
 ];
 
 export const loggerOptions: pino.LoggerOptions = {

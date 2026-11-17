@@ -121,6 +121,40 @@ export class ClassroomService {
     if (!removed) throw ApiError.notFound("Member not found");
   }
 
+  // ===========================================================================
+  // Used by the invite module
+  // ===========================================================================
+
+  // An invite may name a classroom: it must be in the organization and not archived.
+  async assertCanInviteInto(
+    organizationId: string,
+    classroomId: string
+  ): Promise<void> {
+    const classroom = await this.classrooms.findById(
+      organizationId,
+      classroomId
+    );
+    if (!classroom) throw ApiError.notFound("Classroom not found");
+    if (classroom.isArchived) {
+      throw ApiError.conflict("This classroom is archived");
+    }
+  }
+
+  // After an invite is accepted. Skipped when the classroom was archived or removed since;
+  // the person is still in the organization.
+  async addMemberAfterInvite(
+    organizationId: string,
+    classroomId: string,
+    membershipId: string
+  ): Promise<void> {
+    const classroom = await this.classrooms.findById(
+      organizationId,
+      classroomId
+    );
+    if (!classroom || classroom.isArchived) return;
+    await this.classrooms.addMember(organizationId, classroomId, membershipId);
+  }
+
   private onlyOwnClassrooms(caller: ActiveMembership): string | undefined {
     return caller.role === "ORGANIZATION_ADMIN" ? undefined : caller.id;
   }

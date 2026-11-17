@@ -15,10 +15,12 @@ export function createClassroomModule(
   const controller = new ClassroomController(service);
 
   return {
+    service,
     router: ({ guards }: RouterDeps) =>
       createClassroomRouter(controller, guards),
   };
 }
 
 export type ClassroomModule = ReturnType<typeof createClassroomModule>;
+export type { ClassroomService } from "./classroom.service.js";
 export type { ClassroomDto } from "./classroom.schema.js";
