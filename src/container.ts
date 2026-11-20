@@ -82,6 +82,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     sessionService: session.service,
     tokenService,
     googleTokenVerifier,
+    storage,
   });
   const upload = createUploadModule(infra, { storage });
   const organization = createOrganizationModule(infra, {

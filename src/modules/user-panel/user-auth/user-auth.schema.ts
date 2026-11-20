@@ -12,6 +12,12 @@ export const userRefreshBody = z.strictObject({
 });
 export type UserRefreshBody = z.infer<typeof userRefreshBody>;
 
+// The user's own profile change. Only the name; the photo has its own upload route.
+export const updateUserProfileBody = z.strictObject({
+  name: z.string().trim().min(1).max(80),
+});
+export type UpdateUserProfileBody = z.infer<typeof updateUserProfileBody>;
+
 // The signed-in app user, attached to the request as req.user by verifyUser.
 export interface AuthenticatedUser {
   id: string;

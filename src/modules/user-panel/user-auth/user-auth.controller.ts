@@ -3,6 +3,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import { clientInfo } from "../../../utils/clientInfo.js";
 import type {
+  UpdateUserProfileBody,
   UserGoogleSignInBody,
   UserRefreshBody,
   UserSignInResult,
@@ -83,6 +84,30 @@ export class UserAuthController {
   me = (req: Request, res: Response) => {
     if (!req.user) throw ApiError.unauthorized();
     res.status(200).json(new ApiResponse(200, req.user, "Profile fetched"));
+  };
+
+  updateProfile = async (req: Request, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized();
+    const { name } = req.validated.body as UpdateUserProfileBody;
+    const user = await this.userAuthService.updateName(req.user.id, name);
+    res.status(200).json(new ApiResponse(200, user, "Profile updated"));
+  };
+
+  updateAvatar = async (req: Request, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized();
+    if (!req.file)
+      throw ApiError.badRequest('Send the image in the "image" field');
+    const user = await this.userAuthService.updateAvatar(
+      req.user.id,
+      req.file.path
+    );
+    res.status(200).json(new ApiResponse(200, user, "Photo updated"));
+  };
+
+  removeAvatar = async (req: Request, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized();
+    const user = await this.userAuthService.removeAvatar(req.user.id);
+    res.status(200).json(new ApiResponse(200, user, "Photo removed"));
   };
 
   // ===========================================================================

@@ -39,6 +39,36 @@ export class UserAuthRepository {
     return user?.id ?? null;
   }
 
+  updateName(userId: string, name: string): Promise<AuthenticatedUser> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { name },
+      select: profileSelect,
+    });
+  }
+
+  async findAvatarUrl(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+    return user?.avatarUrl ?? null;
+  }
+
+  // Changes the photo only if it is still the one the caller read, so two uploads at
+  // the same time can't both win and leave a file behind. Returns false when it lost.
+  async replaceAvatarUrl(
+    userId: string,
+    previousAvatarUrl: string | null,
+    nextAvatarUrl: string | null
+  ): Promise<boolean> {
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: userId, avatarUrl: previousAvatarUrl },
+      data: { avatarUrl: nextAvatarUrl },
+    });
+    return count === 1;
+  }
+
   // The user's public profile, or null when the account is missing or disabled.
   findActiveProfile(userId: string): Promise<AuthenticatedUser | null> {
     return this.prisma.user.findFirst({

@@ -1,6 +1,9 @@
+import { PUBLIC_IMAGES_URL } from "../../../config/upload.config.js";
 import type { GoogleTokenVerifier } from "../../../core/security/GoogleIdTokenVerifier.js";
 import type { TokenService } from "../../../core/security/TokenService.js";
+import type { StorageProvider } from "../../../core/storage/StorageProvider.js";
 import { ApiError } from "../../../utils/ApiError.js";
+import { uploadAndCompressImage } from "../../../utils/uploadAndCompressImage.js";
 import type {
   ClientInfo,
   IssuedSession,
@@ -17,7 +20,8 @@ export class UserAuthService {
     private readonly users: UserAuthRepository,
     private readonly sessions: SessionService,
     private readonly tokens: TokenService,
-    private readonly google: GoogleTokenVerifier
+    private readonly google: GoogleTokenVerifier,
+    private readonly storage: StorageProvider
   ) {}
 
   // Creates the account on first sign-in. Other devices stay signed in.
@@ -69,6 +73,70 @@ export class UserAuthService {
   // Used by the organization module to add an existing user by email.
   findActiveUserIdByEmail(email: string): Promise<string | null> {
     return this.users.findActiveUserIdByEmail(email.toLowerCase());
+  }
+
+  // ===========================================================================
+  // Own profile
+  // ===========================================================================
+
+  updateName(userId: string, name: string): Promise<AuthenticatedUser> {
+    return this.users.updateName(userId, name);
+  }
+
+  // Compresses the image multer saved at tempPath and makes it the user's photo.
+  async updateAvatar(
+    userId: string,
+    tempPath: string
+  ): Promise<AuthenticatedUser> {
+    const previousAvatarUrl = await this.users.findAvatarUrl(userId);
+    const image = await uploadAndCompressImage(
+      tempPath,
+      { uploadFolder: "profile" },
+      this.storage
+    );
+    return this.swapAvatar(userId, previousAvatarUrl, image.url);
+  }
+
+  async removeAvatar(userId: string): Promise<AuthenticatedUser> {
+    const previousAvatarUrl = await this.users.findAvatarUrl(userId);
+    return this.swapAvatar(userId, previousAvatarUrl, null);
+  }
+
+  private async swapAvatar(
+    userId: string,
+    previousAvatarUrl: string | null,
+    nextAvatarUrl: string | null
+  ): Promise<AuthenticatedUser> {
+    let isReplaced: boolean;
+    try {
+      isReplaced = await this.users.replaceAvatarUrl(
+        userId,
+        previousAvatarUrl,
+        nextAvatarUrl
+      );
+    } catch (err) {
+      await this.deleteStoredAvatar(nextAvatarUrl);
+      throw err;
+    }
+    if (!isReplaced) {
+      // Another change won the race: drop this file, keep theirs.
+      await this.deleteStoredAvatar(nextAvatarUrl);
+      throw ApiError.conflict(
+        "Your photo was changed at the same time. Try again."
+      );
+    }
+
+    await this.deleteStoredAvatar(previousAvatarUrl);
+    const user = await this.users.findActiveProfile(userId);
+    if (!user) throw ApiError.unauthorized();
+    return user;
+  }
+
+  // Only files this app stored are deleted. A Google photo URL is left alone.
+  private async deleteStoredAvatar(avatarUrl: string | null): Promise<void> {
+    if (avatarUrl?.startsWith(`${PUBLIC_IMAGES_URL}/profile/`)) {
+      await this.storage.delete(avatarUrl);
+    }
   }
 
   private toResult(

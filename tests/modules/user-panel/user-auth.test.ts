@@ -1,16 +1,24 @@
-// /user/auth: app sign-in with Google. Many devices per user, and "log out all devices".
+// /user/auth: app sign-in with Google. Many devices per user, and "log out all devices",
+// plus the user's own name and photo (/me).
 // The refresh token travels only in the httpOnly userRefreshToken cookie.
 // Each describe block is one endpoint, in the order: guards → 400 → 401/429 → success.
+import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
+import path from "node:path";
+import sharp from "sharp";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { PUBLIC_IMAGES_DIR } from "../../../src/config/upload.config.js";
 import {
   bearer,
   cookieValue,
   signInUser,
   signInUserRequest,
+  superAdmin,
   USER_GOOGLE_SIGN_IN,
 } from "../../helpers/auth.js";
 import { createUser } from "../../helpers/fixtures.js";
+import type { Route } from "../../helpers/guards.js";
 import {
   app,
   closeTestApp,
@@ -311,5 +319,215 @@ describe("POST /user/auth/logout-all", () => {
     expect(
       (await request(app).get(`${BASE}/me`).set(classmate.auth)).status
     ).toBe(200);
+  });
+});
+
+// ===========================================================================
+// Own profile: name and photo
+// ===========================================================================
+
+// Photo files created by these tests, removed again in afterAll.
+const createdAvatarUrls: string[] = [];
+const avatarDiskPath = (url: string) =>
+  path.join(PUBLIC_IMAGES_DIR, url.replace(/^\/images\//, ""));
+const GOOGLE_AVATAR_URL = "https://lh3.googleusercontent.com/a/test-avatar";
+
+afterAll(async () => {
+  for (const url of createdAvatarUrls) {
+    await rm(avatarDiskPath(url), { force: true });
+  }
+});
+
+function makePhoto(width = 400, height = 300) {
+  const pixels = Buffer.alloc(width * height * 3);
+  for (let i = 0; i < pixels.length; i++) pixels[i] = (i * 31) % 256;
+  return sharp(pixels, { raw: { width, height, channels: 3 } })
+    .png()
+    .toBuffer();
+}
+
+async function uploadAvatar(
+  auth: Record<string, string>,
+  file: Buffer,
+  contentType = "image/png"
+) {
+  const res = await request(app)
+    .put(`${BASE}/me/avatar`)
+    .set(auth)
+    .attach("image", file, { filename: "me.png", contentType });
+  const avatarUrl = res.body?.data?.avatarUrl as string | undefined;
+  if (avatarUrl?.startsWith("/images/")) createdAvatarUrls.push(avatarUrl);
+  return res;
+}
+
+describe("guards on /user/auth/me", () => {
+  it("401 without a token and with an admin token", async () => {
+    const { auth: adminAuth } = await superAdmin();
+    const routes: Route[] = [
+      ["patch", `${BASE}/me`],
+      ["put", `${BASE}/me/avatar`],
+      ["delete", `${BASE}/me/avatar`],
+    ];
+    for (const [method, path] of routes) {
+      expect((await request(app)[method](path)).status, path).toBe(401);
+      expect(
+        (await request(app)[method](path).set(adminAuth)).status,
+        path
+      ).toBe(401);
+    }
+  });
+});
+
+describe("PATCH /user/auth/me", () => {
+  it("400 for a missing, empty or too long name and for unknown fields", async () => {
+    const { auth } = await signInUser();
+    for (const body of [
+      {},
+      { name: "" },
+      { name: "   " },
+      { name: "x".repeat(81) },
+      { name: "Asha", email: "other@buddy.test" },
+      { name: "Asha", avatarUrl: "/images/profile/x.webp" },
+    ]) {
+      expect(
+        (await request(app).patch(`${BASE}/me`).set(auth).send(body)).status,
+        JSON.stringify(body)
+      ).toBe(400);
+    }
+  });
+
+  it("200 saves the trimmed name and GET /me shows it", async () => {
+    const { auth, user } = await signInUser();
+
+    const res = await request(app)
+      .patch(`${BASE}/me`)
+      .set(auth)
+      .send({ name: "  Asha Rao  " });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      id: user.id,
+      email: "student@buddy.test",
+      name: "Asha Rao",
+      avatarUrl: GOOGLE_AVATAR_URL,
+      examCategory: null,
+    });
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.name).toBe("Asha Rao");
+    const me = await request(app).get(`${BASE}/me`).set(auth);
+    expect(me.body.data.name).toBe("Asha Rao");
+  });
+
+  it("200 changes only the caller's own name", async () => {
+    const me = await signInUser("student@buddy.test");
+    const classmate = await signInUser("classmate@buddy.test");
+
+    await request(app).patch(`${BASE}/me`).set(me.auth).send({ name: "Asha" });
+
+    const other = await prisma.user.findUniqueOrThrow({
+      where: { id: classmate.user.id },
+    });
+    expect(other.name).toBe("Google Name");
+  });
+
+  it("signing in with Google again keeps the name the user set", async () => {
+    const { auth, user } = await signInUser();
+    await request(app).patch(`${BASE}/me`).set(auth).send({ name: "Asha" });
+
+    await signInUserRequest("student@buddy.test", { name: "New Google Name" });
+
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.name).toBe("Asha");
+  });
+});
+
+describe("PUT /user/auth/me/avatar", () => {
+  it("400 without a file, for a non-image type, and for fake image bytes", async () => {
+    const { auth } = await signInUser();
+
+    const noFile = await request(app).put(`${BASE}/me/avatar`).set(auth);
+    expect(noFile.status).toBe(400);
+
+    const pdf = await uploadAvatar(
+      auth,
+      Buffer.from("%PDF-1.4"),
+      "application/pdf"
+    );
+    expect(pdf.status).toBe(400);
+
+    // Claims to be a PNG, but the bytes are text.
+    const fake = await uploadAvatar(auth, Buffer.from("not an image"));
+    expect(fake.status).toBe(400);
+    expect(fake.body.message).toBe(
+      "File is not a valid JPEG, PNG or WebP image"
+    );
+  });
+
+  it("200 stores the photo as WebP and GET /me shows it", async () => {
+    const { auth, user } = await signInUser();
+
+    const res = await uploadAvatar(auth, await makePhoto());
+
+    expect(res.status).toBe(200);
+    const avatarUrl = res.body.data.avatarUrl as string;
+    expect(avatarUrl).toMatch(/^\/images\/profile\/[0-9a-f-]{36}\.webp$/);
+    expect(Object.keys(res.body.data).sort()).toEqual(
+      ["avatarUrl", "email", "examCategory", "id", "name"].sort()
+    );
+    expect(existsSync(avatarDiskPath(avatarUrl))).toBe(true);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.avatarUrl).toBe(avatarUrl);
+    const me = await request(app).get(`${BASE}/me`).set(auth);
+    expect(me.body.data.avatarUrl).toBe(avatarUrl);
+  });
+
+  it("200 a new photo deletes the previous stored file", async () => {
+    const { auth } = await signInUser();
+    const first = (await uploadAvatar(auth, await makePhoto())).body.data
+      .avatarUrl as string;
+
+    const second = await uploadAvatar(auth, await makePhoto(500, 400));
+
+    expect(second.status).toBe(200);
+    expect(second.body.data.avatarUrl).not.toBe(first);
+    expect(existsSync(avatarDiskPath(first))).toBe(false);
+  });
+
+  it("signing in with Google again keeps the photo the user set", async () => {
+    const { auth, user } = await signInUser();
+    const avatarUrl = (await uploadAvatar(auth, await makePhoto())).body.data
+      .avatarUrl as string;
+
+    await signInUserRequest("student@buddy.test", {
+      avatarUrl: "https://lh3.googleusercontent.com/a/new-photo",
+    });
+
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.avatarUrl).toBe(avatarUrl);
+  });
+});
+
+describe("DELETE /user/auth/me/avatar", () => {
+  it("200 removes the stored photo and its file", async () => {
+    const { auth, user } = await signInUser();
+    const avatarUrl = (await uploadAvatar(auth, await makePhoto())).body.data
+      .avatarUrl as string;
+
+    const res = await request(app).delete(`${BASE}/me/avatar`).set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.avatarUrl).toBeNull();
+    expect(existsSync(avatarDiskPath(avatarUrl))).toBe(false);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.avatarUrl).toBeNull();
+  });
+
+  it("200 clears a Google photo without touching storage", async () => {
+    const { auth } = await signInUser();
+
+    const res = await request(app).delete(`${BASE}/me/avatar`).set(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.avatarUrl).toBeNull();
   });
 });

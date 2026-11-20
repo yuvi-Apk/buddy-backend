@@ -2,6 +2,7 @@
 import { env } from "../../../config/env.js";
 import type { GoogleTokenVerifier } from "../../../core/security/GoogleIdTokenVerifier.js";
 import type { TokenService } from "../../../core/security/TokenService.js";
+import type { StorageProvider } from "../../../core/storage/StorageProvider.js";
 import type { Infra, RouterDeps } from "../../../types/module.types.js";
 import type { SessionService } from "../../shared/session/index.js";
 import { UserAuthController } from "./user-auth.controller.js";
@@ -15,6 +16,7 @@ export function createUserAuthModule(
     sessionService: SessionService;
     tokenService: TokenService;
     googleTokenVerifier: GoogleTokenVerifier;
+    storage: StorageProvider;
   }
 ) {
   const repository = new UserAuthRepository(prisma);
@@ -22,7 +24,8 @@ export function createUserAuthModule(
     repository,
     deps.sessionService,
     deps.tokenService,
-    deps.googleTokenVerifier
+    deps.googleTokenVerifier,
+    deps.storage
   );
   const controller = new UserAuthController(service, {
     secure: env.NODE_ENV === "production",
